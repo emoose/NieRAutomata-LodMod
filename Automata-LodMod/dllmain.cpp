@@ -122,7 +122,7 @@ uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD };
 uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9 };
 uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF };
 
-int ShadowBufferSizeImprovement = 2; // sets buffer size to 8192/4096?
+int ShadowBufferSize = 4096; // can be set to 2048+
 
 bool injected = false;
 void Injector_InitHooks()
@@ -156,20 +156,37 @@ void Injector_InitHooks()
   // Seems to always be set to 1 normally, but the code around it seems to be checking game render resolution
   // and sets it to 4 depending on some unknown resolution being detected, guess it was left incomplete?
   // Buffer size = value << 0xB
+  int value = ShadowBufferSize >> 11;
+  if (value <= 0)
+    return; // can't go any lower than 2048
+
   uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
-  *(uint32_t*)(&ShadowQualityPatch[1]) = 1 + ShadowBufferSizeImprovement + 1; // +1 so that this buffer is larger than below ones
+  *(uint32_t*)(&ShadowQualityPatch[1]) = value;
   SafeWrite(mBaseAddress + ShadowQualityPatchAddr[win7], ShadowQualityPatch, 6);
 
-  // Update shadow buffer sizes (should be half of the above buffer size?)
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
+  // Size of each quadrant in shadowmap
+  ShadowBufferSize /= 2;
 
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
+  // Poor mans lzcnt...
+  int tempSize = ShadowBufferSize;
+  int shadowNumBits = 0;
+  while (tempSize)
+  {
+    tempSize /= 2;
+    shadowNumBits++;
+  }
+  shadowNumBits--;
+
+  // Update shadow buffer sizes (should be half of the above buffer size?)
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[win7], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[win7], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[win7], uint32_t(ShadowBufferSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[win7], uint32_t(ShadowBufferSize));
+
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[win7], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[win7], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[win7], uint32_t(ShadowBufferSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[win7], uint32_t(ShadowBufferSize));
 }
 
 // IAT hooks for getting around SteamStub, bleh
