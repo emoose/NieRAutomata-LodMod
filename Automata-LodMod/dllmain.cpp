@@ -1,7 +1,4 @@
 ﻿#include "pch.h"
-#include <fstream>
-#include <sstream>
-#include <Shlobj.h>
 #include <filesystem>
 
 HMODULE GameHModule;
@@ -22,6 +19,12 @@ const uint32_t var_SettingAddr_AOEnabled[] = { 0x1421F58, 0x1414E48 };
 const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0 };
 
 const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70 };
+
+// Configurables
+bool DisableLODs = true;
+float ShadowMinimumDistance = 0;
+float ShadowMaximumDistance = 0;
+int ShadowBufferSize = 2048; // can be set to 2048+
 
 #pragma pack(push, 1)
 struct NA_Mesh
@@ -112,8 +115,6 @@ uint32_t IsAOAllowed_Hook(void* a1)
   return result;
 }
 
-float newDistance = 60;
-
 // TODO: need to find where the shadow distance is set originally and hook there instead
 // That way we could double/half/etc instead of needing to set to a static value
 // (atm this is just hooking the function that reads it/handles setting up shadow stuff from it, which is ran every frame...)
@@ -122,8 +123,10 @@ ShadowDistanceReader_Fn ShadowDistanceReader_Orig;
 void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
 {
   float* distance = (float*)(a1 + 0x14);
-  if(*distance < newDistance)
-    *distance = newDistance;
+  if (ShadowMinimumDistance > 0 && *distance < ShadowMinimumDistance)
+    *distance = ShadowMinimumDistance;
+  if (ShadowMaximumDistance > 0 && *distance > ShadowMaximumDistance)
+    *distance = ShadowMaximumDistance;
 
   return ShadowDistanceReader_Orig(a1, a2, a3, a4);
 }
@@ -140,9 +143,8 @@ uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD };
 uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9 };
 uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF };
 
-int ShadowBufferSize = 16384; // can be set to 2048+
-
 bool injected = false;
+WCHAR IniPath[4096];
 void Injector_InitHooks()
 {
   if (injected) {
@@ -160,10 +162,42 @@ void Injector_InitHooks()
       return;
     }
   }
+
+  // Get folder path of currently running EXE
+  GetModuleFileName(GameHModule, IniPath, 4096);
+  int len = wcslen(IniPath);
+  int lastPathSep = -1;
+  for (int i = len - 2; i >= 0; i--)
+  {
+    if (IniPath[i] == '\\' || IniPath[i] == '/')
+    {
+      lastPathSep = i;
+      break;
+    }
+  }
+
+  if (lastPathSep >= 0)
+  {
+    IniPath[lastPathSep + 1] = 0;
+    swprintf_s(IniPath, L"%s/LodMod.ini", IniPath);
+
+    if (FileExists(IniPath))
+    {
+      DisableLODs = INI_GetBool(IniPath, L"LodMod", L"DisableLODs", true);
+      ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
+      ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
+      ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
+    }
+  }
+
   SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[win7];
 
-  MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[win7]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
-  MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[win7]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
+  if (DisableLODs)
+  {
+    MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[win7]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
+    MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[win7]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
+  }
+
   MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[win7]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[win7]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
 
