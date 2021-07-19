@@ -21,6 +21,8 @@ const uint32_t var_SettingAddr_AOEnabled[] = { 0x1421F58, 0x1414E48 };
 
 const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0 };
 
+const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70 };
+
 #pragma pack(push, 1)
 struct NA_Mesh
 {
@@ -110,6 +112,22 @@ uint32_t IsAOAllowed_Hook(void* a1)
   return result;
 }
 
+float newDistance = 60;
+
+// TODO: need to find where the shadow distance is set originally and hook there instead
+// That way we could double/half/etc instead of needing to set to a static value
+// (atm this is just hooking the function that reads it/handles setting up shadow stuff from it, which is ran every frame...)
+typedef void*(*ShadowDistanceReader_Fn)(void* a1, void* a2, void* a3, void* a4);
+ShadowDistanceReader_Fn ShadowDistanceReader_Orig;
+void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
+{
+  float* distance = (float*)(a1 + 0x14);
+  if(*distance < newDistance)
+    *distance = newDistance;
+
+  return ShadowDistanceReader_Orig(a1, a2, a3, a4);
+}
+
 uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354 };
 
 uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695 };
@@ -122,7 +140,7 @@ uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD };
 uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9 };
 uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF };
 
-int ShadowBufferSize = 4096; // can be set to 2048+
+int ShadowBufferSize = 16384; // can be set to 2048+
 
 bool injected = false;
 void Injector_InitHooks()
@@ -147,6 +165,7 @@ void Injector_InitHooks()
   MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[win7]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[win7]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[win7]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[win7]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
 
   MH_EnableHook(MH_ALL_HOOKS);
 
@@ -320,7 +339,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod 0.3 test - by emoose\n");
+  printf("NieR Automata LodMod 0.4 test - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
