@@ -7,26 +7,19 @@
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
+// Arrays below are [Win10 exe, Win7 exe]
 // Address of PE header timestamp, so we can check what EXE is being used
-const uint32_t TimestampAddr_Win10 = 0x178;
-const uint32_t TimestampAddr_Win7 = 0x1A8;
-
-const uint32_t Timestamp_Win10 = 1624484050;
-const uint32_t Timestamp_Win7 = 1624484031;
+const uint32_t TimestampAddr[] = { 0x178, 0x1A8 };
+const uint32_t Timestamp[] = { 1624484050, 1624484031 };
 
 // Addresses of game functions/vars
 
-const uint32_t HookAddr_Win10 = 0x84CD60;
-const uint32_t HookAddr_Win7 = 0x844680;
+const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680 };
+const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990 };
 
-const uint32_t Hook2Addr_Win10 = 0x84D070;
-const uint32_t Hook2Addr_Win7 = 0x844990;
+const uint32_t var_SettingAddr_AOEnabled[] = { 0x1421F58, 0x1414E48 };
 
-const uint32_t SettingAddr_AOEnabled_Win10 = 0x1421F58;
-const uint32_t SettingAddr_AOEnabled_Win7 = 0x1414E48;
-
-const uint32_t IsAOAllowedAddr_Win10 = 0x78BC20;
-const uint32_t IsAOAllowedAddr_Win7 = 0x783AF0;
+const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0 };
 
 #pragma pack(push, 1)
 struct NA_Mesh
@@ -106,7 +99,7 @@ void* sub_84D070_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void*
 typedef uint32_t(*IsAOAllowed_Fn)(void* a1);
 IsAOAllowed_Fn IsAOAllowed_Orig;
 
-uint32_t SettingAddr_AOEnabled = SettingAddr_AOEnabled_Win10;
+uint32_t SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[0];
 uint32_t IsAOAllowed_Hook(void* a1)
 {
   if (!IsAOAllowed_Orig(a1)) {
@@ -116,6 +109,20 @@ uint32_t IsAOAllowed_Hook(void* a1)
   auto result = *(uint32_t*)(mBaseAddress + SettingAddr_AOEnabled) != 0;
   return result;
 }
+
+uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354 };
+
+uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695 };
+uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B };
+uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7 };
+uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD };
+
+uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7 };
+uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD };
+uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9 };
+uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF };
+
+int ShadowBufferSizeImprovement = 2; // sets buffer size to 8192/4096?
 
 bool injected = false;
 void Injector_InitHooks()
@@ -127,27 +134,42 @@ void Injector_InitHooks()
 
   MH_Initialize();
 
-  uint32_t HookAddr = HookAddr_Win10;
-  uint32_t Hook2Addr = Hook2Addr_Win10;
-  uint32_t IsAOAllowedAddr = IsAOAllowedAddr_Win10;
-  SettingAddr_AOEnabled = SettingAddr_AOEnabled_Win10;
-  if (*(uint32_t*)(mBaseAddress + TimestampAddr_Win10) != Timestamp_Win10) {
-    HookAddr = HookAddr_Win7;
-    Hook2Addr = Hook2Addr_Win7;
-    IsAOAllowedAddr = IsAOAllowedAddr_Win7;
-    SettingAddr_AOEnabled = SettingAddr_AOEnabled_Win7;
-    if (*(uint32_t*)(mBaseAddress + TimestampAddr_Win7) != Timestamp_Win7) {
+  int win7 = 0;
+  if (*(uint32_t*)(mBaseAddress + TimestampAddr[0]) != Timestamp[0]) {
+    win7 = 1;
+    if (*(uint32_t*)(mBaseAddress + TimestampAddr[1]) != Timestamp[1]) {
       // wrong EXE?
       return;
     }
   }
+  SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[win7];
 
-  MH_CreateHook((LPVOID)(mBaseAddress + HookAddr), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
-  MH_CreateHook((LPVOID)(mBaseAddress + Hook2Addr), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
-  MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
-
+  MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[win7]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[win7]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[win7]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
 
   MH_EnableHook(MH_ALL_HOOKS);
+
+  // Shadow quality patch:
+  // 
+  // Code at this address sets a global var that's used to size different buffers based on it
+  // Seems to always be set to 1 normally, but the code around it seems to be checking game render resolution
+  // and sets it to 4 depending on some unknown resolution being detected, guess it was left incomplete?
+  // Buffer size = value << 0xB
+  uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
+  *(uint32_t*)(&ShadowQualityPatch[1]) = 1 + ShadowBufferSizeImprovement + 1; // +1 so that this buffer is larger than below ones
+  SafeWrite(mBaseAddress + ShadowQualityPatchAddr[win7], ShadowQualityPatch, 6);
+
+  // Update shadow buffer sizes (should be half of the above buffer size?)
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
+
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[win7], uint8_t(0xA + ShadowBufferSizeImprovement));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[win7], uint32_t(1 << (0xA + ShadowBufferSizeImprovement)));
 }
 
 // IAT hooks for getting around SteamStub, bleh
@@ -281,7 +303,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod 0.2a - by emoose\n");
+  printf("NieR Automata LodMod 0.3 test - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
