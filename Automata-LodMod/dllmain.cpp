@@ -30,6 +30,7 @@ const uint32_t g_HiZMapTexture_ResHalfing1[] = { 0x774348, 0x76C218 };
 const uint32_t g_HiZMapTexture_ResHalfing2[] = { 0x774368, 0x76C238 };
 
 // Configurables
+float LODMultiplier = 0;
 bool DisableLODs = true;
 float ShadowMinimumDistance = 0;
 float ShadowMaximumDistance = 0;
@@ -62,9 +63,11 @@ struct NA_Mesh
   /* 0x590 */ uint8_t Unk590[0x58];
   /* 0x5E8 */ float BloomStrength; // always 0 or 1 ?
 
-  void DisableLODs() {
+  void DisableLODs()
+  {
     // Set all DistRates to 0
-    if (DistRates) {
+    if (DistRates)
+    {
       memset(DistRates, 0, sizeof(float) * 4);
     }
 
@@ -78,6 +81,18 @@ struct NA_Mesh
     // Remove UseCullAABB flag
     Unk520 &= 0xFFFFFFEF;
   }
+
+  void MultiplyLODs(float multiplier)
+  {
+    if (!DistRates || multiplier <= 0)
+      return;
+
+    for (int i = 0; i < NumDistRates; i++)
+    {
+      // DistRate needs to be made smaller to go further, idk how it works exactly
+      DistRates[i] /= multiplier;
+    }
+  }
 };
 static_assert(sizeof(NA_Mesh) == 0x5EC); // not proper size lol
 #pragma pack(pop)
@@ -86,13 +101,23 @@ typedef void* (*sub_84CD60_Fn)(void* a1, void* a2, void* a3, void* a4, void* a5,
 sub_84CD60_Fn sub_84CD60_Orig;
 void* sub_84CD60_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
-  // In case something in orig function depends on LOD details, disable them first
-  a1->DisableLODs();
+  if (DisableLODs)
+  {
+    // In case something in orig function depends on LOD details, disable them first
+    a1->DisableLODs();
+  }
 
   auto ret = sub_84CD60_Orig(a1, a2, a3, a4, a5, a6, a7, a8);
 
-  // Make sure LOD data is disabled
-  a1->DisableLODs();
+  if (DisableLODs)
+  {
+    // Make sure LOD data is disabled
+    a1->DisableLODs();
+  }
+  else
+  {
+    a1->MultiplyLODs(LODMultiplier);
+  }
 
   return ret;
 }
@@ -100,13 +125,23 @@ void* sub_84CD60_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void*
 sub_84CD60_Fn sub_84D070_Orig;
 void* sub_84D070_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
-  // In case something in orig function depends on LOD details, disable them first
-  a1->DisableLODs();
+  if (DisableLODs)
+  {
+    // In case something in orig function depends on LOD details, disable them first
+    a1->DisableLODs();
+  }
 
   auto ret = sub_84D070_Orig(a1, a2, a3, a4, a5, a6, a7, a8);
 
-  // Make sure LOD data is disabled
-  a1->DisableLODs();
+  if (DisableLODs)
+  {
+    // Make sure LOD data is disabled
+    a1->DisableLODs();
+  }
+  else
+  {
+    a1->MultiplyLODs(LODMultiplier);
+  }
 
   return ret;
 }
@@ -196,6 +231,7 @@ void Injector_InitHooks()
     if (FileExists(IniPath))
     {
       DisableLODs = INI_GetBool(IniPath, L"LodMod", L"DisableLODs", true);
+      LODMultiplier = INI_GetFloat(IniPath, L"LodMod", L"LODMultiplier", 0);
       ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
       ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
       ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
@@ -205,7 +241,7 @@ void Injector_InitHooks()
 
   SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[win7];
 
-  if (DisableLODs)
+  if (DisableLODs || LODMultiplier > 0)
   {
     MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[win7]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
     MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[win7]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
@@ -230,7 +266,23 @@ void Injector_InitHooks()
     SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing1[win7], uint16_t(0x9090));
     SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing2[win7], uint16_t(0x9090));
 
-    // SaoUpsampling shader can (and probably should) be disabled here, but that needs a bunch of patches to redirect texture buffers, ugh
+    /*
+    Double SAO resolution again
+    Unfortunately SaoUpsampling shader needs to be disabled, which makes SAO look even worse...
+    
+    Skip SaoUpsampling (as it breaks if SAO resolution is greater than screen res)
+    787864 -> E9 BA 00 00 00
+    Make p_SaoTexture_Half0 point to p_SaoTexture (as p_SaoTexture is only updated by SaoUpsampling normally)
+    7744CA -> 3D
+
+    Double resolution of SAO:
+    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing1[win7], uint16_t(0xE0D1));
+    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing2[win7], uint16_t(0xE0D1));
+    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing1[win7], uint16_t(0xE0D1));
+    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing2[win7], uint16_t(0xE0D1));
+    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing1[win7], uint16_t(0xE0D1));
+    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing2[win7], uint16_t(0xE0D1));
+    */
   }
 
   // Shadow quality patch:
@@ -406,7 +458,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod 0.52 test - by emoose\n");
+  printf("NieR Automata LodMod 0.53 - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
