@@ -153,6 +153,8 @@ uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD };
 uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9 };
 uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF };
 
+uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1 };
+
 bool injected = false;
 WCHAR IniPath[4096];
 void Injector_InitHooks()
@@ -268,6 +270,9 @@ void Injector_InitHooks()
   SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[win7], uint8_t(shadowNumBits));
   SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[win7], uint32_t(ShadowBufferSize));
   SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[win7], uint32_t(ShadowBufferSize));
+
+  // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
+  SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[win7], uint32_t(ShadowBufferSize));
 }
 
 // IAT hooks for getting around SteamStub, bleh
@@ -401,7 +406,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod 0.51 test - by emoose\n");
+  printf("NieR Automata LodMod 0.52 test - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
