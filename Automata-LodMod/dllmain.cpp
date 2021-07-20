@@ -20,11 +20,21 @@ const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0 };
 
 const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70 };
 
+const uint32_t g_SaoTexture_Half0_ResHalfing1[] = { 0x7743F1, 0x76C2C1 };
+const uint32_t g_SaoTexture_Half0_ResHalfing2[] = { 0x774411, 0x76C2E1 };
+
+const uint32_t g_SaoTexture_Half1_ResHalfing1[] = { 0x77445F, 0x76C32F };
+const uint32_t g_SaoTexture_Half1_ResHalfing2[] = { 0x774475, 0x76C345 };
+
+const uint32_t g_HiZMapTexture_ResHalfing1[] = { 0x774348, 0x76C218 };
+const uint32_t g_HiZMapTexture_ResHalfing2[] = { 0x774368, 0x76C238 };
+
 // Configurables
 bool DisableLODs = true;
 float ShadowMinimumDistance = 0;
 float ShadowMaximumDistance = 0;
 int ShadowBufferSize = 2048; // can be set to 2048+
+bool FullResAO = false;
 
 #pragma pack(push, 1)
 struct NA_Mesh
@@ -187,6 +197,7 @@ void Injector_InitHooks()
       ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
       ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
       ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
+      FullResAO = INI_GetBool(IniPath, L"LodMod", L"FullResAO", false);
     }
   }
 
@@ -202,6 +213,23 @@ void Injector_InitHooks()
   MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[win7]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
 
   MH_EnableHook(MH_ALL_HOOKS);
+
+  if (FullResAO)
+  {
+    // "sar eax, 1" -> nop, doubles SAO resolution by preventing SAO texture size from being halved
+    // Changing these from "sar eax, 1" to "shl eax 1" should theoretically let us double it again, but that causes issues atm..
+    // probably needs g_SaoTexture[0] size doubled, and possibly g_ZMapTexture_SAO
+    // those both use different funcs that get the (screen?) resolution directly though, not as easy to patch as these ones :(
+
+    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing1[win7], uint16_t(0x9090));
+    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing2[win7], uint16_t(0x9090));
+    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing1[win7], uint16_t(0x9090));
+    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing2[win7], uint16_t(0x9090));
+    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing1[win7], uint16_t(0x9090));
+    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing2[win7], uint16_t(0x9090));
+
+    // SaoUpsampling shader can (and probably should) be disabled here, but that needs a bunch of patches to redirect texture buffers, ugh
+  }
 
   // Shadow quality patch:
   // 
@@ -373,7 +401,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod 0.4 test - by emoose\n");
+  printf("NieR Automata LodMod 0.51 test - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
