@@ -17,6 +17,8 @@ const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254 };
 
 // Addresses of game functions/vars
 
+const uint32_t GetSaveFolder_Addr[] = { 0x7A5790, 0x79D570, 0x7CB040 };
+
 const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90 };
 const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990, 0x873DA0 };
 
@@ -216,6 +218,8 @@ void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
 
 bool injected = false;
 WCHAR IniPath[4096];
+char IniPathA[4096];
+
 void Injector_InitHooks()
 {
   if (injected) {
@@ -257,6 +261,20 @@ void Injector_InitHooks()
   {
     IniPath[lastPathSep + 1] = 0;
     swprintf_s(IniPath, L"%s/LodMod.ini", IniPath);
+
+    if (!FileExists(IniPath))
+    {
+      // Try checking games save folder
+      // Win7/Win10: Documents\My Games\NieR_Automata
+      // UWP: Documents\My Games\NieR_Automata_PC
+
+      typedef BOOL(*GetSaveFolder_Fn)(char* DstBuf, size_t SizeInBytes);
+      GetSaveFolder_Fn GetSaveFolder_Orig = (GetSaveFolder_Fn)(mBaseAddress + GetSaveFolder_Addr[version]);
+      if (GetSaveFolder_Orig(IniPathA, 4096))
+      {
+        swprintf_s(IniPath, L"%S/LodMod.ini", IniPathA);
+      }
+    }
 
     if (FileExists(IniPath))
     {
