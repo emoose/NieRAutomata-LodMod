@@ -29,13 +29,20 @@ const uint32_t g_SaoTexture_Half1_ResHalfing2[] = { 0x774475, 0x76C345 };
 const uint32_t g_HiZMapTexture_ResHalfing1[] = { 0x774348, 0x76C218 };
 const uint32_t g_HiZMapTexture_ResHalfing2[] = { 0x774368, 0x76C238 };
 
+// SAO CreateTextureBuffer call hooks:
+uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0 };
+uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2 };
+
+uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A };
+uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316 };
+uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384 };
+
 // Configurables
-float LODMultiplier = 0;
-bool DisableLODs = true;
+float LODMultiplier = 0; // if set to 0 will disable LODs
+float AOMultiplier = 1;
 float ShadowMinimumDistance = 0;
 float ShadowMaximumDistance = 0;
 int ShadowBufferSize = 2048; // can be set to 2048+
-bool FullResAO = false;
 
 #pragma pack(push, 1)
 struct NA_Mesh
@@ -87,7 +94,7 @@ struct NA_Mesh
     if (!DistRates || multiplier <= 0)
       return;
 
-    for (int i = 0; i < NumDistRates; i++)
+    for (uint32_t i = 0; i < NumDistRates; i++)
     {
       // DistRate needs to be made smaller to go further, idk how it works exactly
       DistRates[i] /= multiplier;
@@ -101,7 +108,7 @@ typedef void* (*sub_84CD60_Fn)(void* a1, void* a2, void* a3, void* a4, void* a5,
 sub_84CD60_Fn sub_84CD60_Orig;
 void* sub_84CD60_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
-  if (DisableLODs)
+  if (LODMultiplier <= 0)
   {
     // In case something in orig function depends on LOD details, disable them first
     a1->DisableLODs();
@@ -109,7 +116,7 @@ void* sub_84CD60_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void*
 
   auto ret = sub_84CD60_Orig(a1, a2, a3, a4, a5, a6, a7, a8);
 
-  if (DisableLODs)
+  if (LODMultiplier <= 0)
   {
     // Make sure LOD data is disabled
     a1->DisableLODs();
@@ -125,7 +132,7 @@ void* sub_84CD60_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void*
 sub_84CD60_Fn sub_84D070_Orig;
 void* sub_84D070_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
-  if (DisableLODs)
+  if (LODMultiplier <= 0)
   {
     // In case something in orig function depends on LOD details, disable them first
     a1->DisableLODs();
@@ -133,7 +140,7 @@ void* sub_84D070_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void*
 
   auto ret = sub_84D070_Orig(a1, a2, a3, a4, a5, a6, a7, a8);
 
-  if (DisableLODs)
+  if (LODMultiplier <= 0)
   {
     // Make sure LOD data is disabled
     a1->DisableLODs();
@@ -158,6 +165,26 @@ uint32_t IsAOAllowed_Hook(void* a1)
 
   auto result = *(uint32_t*)(mBaseAddress + SettingAddr_AOEnabled) != 0;
   return result;
+}
+
+typedef void* (*CreateTextureBuffer_Fn)(void* texture, uint32_t width, uint32_t height, void* a4, void* a5, void* a6, void* a7, void* a8, void* a9, void* a10, void* a11, void* a12);
+CreateTextureBuffer_Fn CreateTextureBuffer_Orig;
+
+void* AO_CreateTextureBuffer_Hook(void* texture, uint32_t width, uint32_t height, void* a4, void* a5, void* a6, void* a7, void* a8, void* a9, void* a10, void* a11, void* a12)
+{
+  float width_new = (float)width * AOMultiplier;
+  float height_new = (float)height * AOMultiplier;
+
+  return CreateTextureBuffer_Orig(texture, (uint32_t)width_new, (uint32_t)height_new, a4, a5, a6, a7, a8, a9, a10, a11, a12);
+}
+
+void PatchCall(uintptr_t callAddr, uintptr_t callDest)
+{
+  uint8_t callBuf[] = { 0xE8, 0x00, 0x00, 0x00, 0x00 };
+  uint32_t diff = callDest - (callAddr + 5);
+  *(uint32_t*)&callBuf[1] = diff;
+
+  SafeWrite(callAddr, callBuf, 5);
 }
 
 // TODO: need to find where the shadow distance is set originally and hook there instead
@@ -230,18 +257,27 @@ void Injector_InitHooks()
 
     if (FileExists(IniPath))
     {
-      DisableLODs = INI_GetBool(IniPath, L"LodMod", L"DisableLODs", true);
       LODMultiplier = INI_GetFloat(IniPath, L"LodMod", L"LODMultiplier", 0);
+      AOMultiplier = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplier", 1);
       ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
       ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
       ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
-      FullResAO = INI_GetBool(IniPath, L"LodMod", L"FullResAO", false);
+
+      // Old INI keynames...
+      if (INI_GetBool(IniPath, L"LodMod", L"DisableLODs", false))
+        LODMultiplier = 0;
+
+      if (INI_GetBool(IniPath, L"LodMod", L"FullResAO", false))
+        AOMultiplier = 2;
+
+      // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
+      AOMultiplier = fmaxf(fminf(AOMultiplier, 2), 0.1f);
     }
   }
 
   SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[win7];
 
-  if (DisableLODs || LODMultiplier > 0)
+  if (LODMultiplier != 1)
   {
     MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[win7]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
     MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[win7]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
@@ -252,37 +288,22 @@ void Injector_InitHooks()
 
   MH_EnableHook(MH_ALL_HOOKS);
 
-  if (FullResAO)
+  if (AOMultiplier != 1)
   {
-    // "sar eax, 1" -> nop, doubles SAO resolution by preventing SAO texture size from being halved
-    // Changing these from "sar eax, 1" to "shl eax 1" should theoretically let us double it again, but that causes issues atm..
-    // probably needs g_SaoTexture[0] size doubled, and possibly g_ZMapTexture_SAO
-    // those both use different funcs that get the (screen?) resolution directly though, not as easy to patch as these ones :(
+    CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[win7]);
 
-    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing1[win7], uint16_t(0x9090));
-    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing2[win7], uint16_t(0x9090));
-    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing1[win7], uint16_t(0x9090));
-    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing2[win7], uint16_t(0x9090));
-    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing1[win7], uint16_t(0x9090));
-    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing2[win7], uint16_t(0x9090));
+    // Have to write a trampoline somewhere within 2GiB of the hooked call, needs 12 bytes...
+    uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xE0 };
 
-    /*
-    Double SAO resolution again
-    Unfortunately SaoUpsampling shader needs to be disabled, which makes SAO look even worse...
-    
-    Skip SaoUpsampling (as it breaks if SAO resolution is greater than screen res)
-    787864 -> E9 BA 00 00 00
-    Make p_SaoTexture_Half0 point to p_SaoTexture (as p_SaoTexture is only updated by SaoUpsampling normally)
-    7744CA -> 3D
+    *(uintptr_t*)&trampoline[2] = (uintptr_t)&AO_CreateTextureBuffer_Hook;
 
-    Double resolution of SAO:
-    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing1[win7], uint16_t(0xE0D1));
-    SafeWrite(mBaseAddress + g_SaoTexture_Half0_ResHalfing2[win7], uint16_t(0xE0D1));
-    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing1[win7], uint16_t(0xE0D1));
-    SafeWrite(mBaseAddress + g_SaoTexture_Half1_ResHalfing2[win7], uint16_t(0xE0D1));
-    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing1[win7], uint16_t(0xE0D1));
-    SafeWrite(mBaseAddress + g_HiZMapTexture_ResHalfing2[win7], uint16_t(0xE0D1));
-    */
+    SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7], trampoline, 12);
+
+    // Hook SAO-related CreateTextureBuffer calls to call the trampoline we patched in
+
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[win7], mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7]);
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[win7], mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7]);
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[win7], mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7]);
   }
 
   // Shadow quality patch:
@@ -326,6 +347,7 @@ void Injector_InitHooks()
   // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
   SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[win7], uint32_t(ShadowBufferSize));
 }
+
 
 // IAT hooks for getting around SteamStub, bleh
 
