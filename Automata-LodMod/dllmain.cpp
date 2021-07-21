@@ -4,38 +4,49 @@
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
+enum GameVersion {
+  Win10 = 0,
+  Win7,
+  UWP
+};
+
 // Arrays below are [Win10 exe, Win7 exe]
 // Address of PE header timestamp, so we can check what EXE is being used
-const uint32_t TimestampAddr[] = { 0x178, 0x1A8 };
-const uint32_t Timestamp[] = { 1624484050, 1624484031 };
+const uint32_t TimestampAddr[] = { 0x178, 0x1A8, 0x180 };
+const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254 };
 
 // Addresses of game functions/vars
 
-const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680 };
-const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990 };
+const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90 };
+const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990, 0x873DA0 };
 
-const uint32_t var_SettingAddr_AOEnabled[] = { 0x1421F58, 0x1414E48 };
+const uint32_t var_SettingAddr_AOEnabled[] = { 0x1421F58, 0x1414E48, 0x14A4B08 };
 
-const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0 };
+const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0, 0x79A620 };
 
-const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70 };
+const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70, 0x78E8A0 };
 
-const uint32_t g_SaoTexture_Half0_ResHalfing1[] = { 0x7743F1, 0x76C2C1 };
-const uint32_t g_SaoTexture_Half0_ResHalfing2[] = { 0x774411, 0x76C2E1 };
+uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354, 0x780E84 };
 
-const uint32_t g_SaoTexture_Half1_ResHalfing1[] = { 0x77445F, 0x76C32F };
-const uint32_t g_SaoTexture_Half1_ResHalfing2[] = { 0x774475, 0x76C345 };
+uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695, 0x78E1C5 };
+uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B, 0x78E1CB };
+uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7, 0x78E1E7 };
+uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD, 0x78E1ED };
 
-const uint32_t g_HiZMapTexture_ResHalfing1[] = { 0x774348, 0x76C218 };
-const uint32_t g_HiZMapTexture_ResHalfing2[] = { 0x774368, 0x76C238 };
+uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7, 0x78DFF7 };
+uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD, 0x78DFFD };
+uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9, 0x78E019 };
+uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F };
+
+uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421 };
 
 // SAO CreateTextureBuffer call hooks:
-uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0 };
-uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2 };
+uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870 };
+uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2 };
 
-uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A };
-uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316 };
-uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384 };
+uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A };
+uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46 };
+uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4 };
 
 // Configurables
 float LODMultiplier = 0; // if set to 0 will disable LODs
@@ -203,20 +214,6 @@ void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
   return ShadowDistanceReader_Orig(a1, a2, a3, a4);
 }
 
-uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354 };
-
-uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695 };
-uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B };
-uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7 };
-uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD };
-
-uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7 };
-uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD };
-uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9 };
-uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF };
-
-uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1 };
-
 bool injected = false;
 WCHAR IniPath[4096];
 void Injector_InitHooks()
@@ -228,12 +225,18 @@ void Injector_InitHooks()
 
   MH_Initialize();
 
-  int win7 = 0;
-  if (*(uint32_t*)(mBaseAddress + TimestampAddr[0]) != Timestamp[0]) {
-    win7 = 1;
-    if (*(uint32_t*)(mBaseAddress + TimestampAddr[1]) != Timestamp[1]) {
-      // wrong EXE?
-      return;
+  int version = GameVersion::Win10;
+  if (*(uint32_t*)(mBaseAddress + TimestampAddr[0]) != Timestamp[0])
+  {
+    version = GameVersion::Win7;
+    if (*(uint32_t*)(mBaseAddress + TimestampAddr[1]) != Timestamp[1])
+    {
+      version = GameVersion::UWP;
+      if (*(uint32_t*)(mBaseAddress + TimestampAddr[2]) != Timestamp[2])
+      {
+        // wrong EXE?
+        return;
+      }
     }
   }
 
@@ -275,35 +278,35 @@ void Injector_InitHooks()
     }
   }
 
-  SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[win7];
+  SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[version];
 
   if (LODMultiplier != 1)
   {
-    MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[win7]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
-    MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[win7]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
+    MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[version]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
+    MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[version]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
   }
 
-  MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[win7]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
-  MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[win7]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[version]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
 
   MH_EnableHook(MH_ALL_HOOKS);
 
   if (AOMultiplier != 1)
   {
-    CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[win7]);
+    CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[version]);
 
     // Have to write a trampoline somewhere within 2GiB of the hooked call, needs 12 bytes...
     uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xE0 };
 
     *(uintptr_t*)&trampoline[2] = (uintptr_t)&AO_CreateTextureBuffer_Hook;
 
-    SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7], trampoline, 12);
+    SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[version], trampoline, 12);
 
     // Hook SAO-related CreateTextureBuffer calls to call the trampoline we patched in
 
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[win7], mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7]);
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[win7], mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7]);
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[win7], mBaseAddress + CreateTextureBuffer_TrampolineAddr[win7]);
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
   }
 
   // Shadow quality patch:
@@ -318,7 +321,7 @@ void Injector_InitHooks()
 
   uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
   *(uint32_t*)(&ShadowQualityPatch[1]) = value;
-  SafeWrite(mBaseAddress + ShadowQualityPatchAddr[win7], ShadowQualityPatch, 6);
+  SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version], ShadowQualityPatch, 6);
 
   // Size of each quadrant in shadowmap
   ShadowBufferSize /= 2;
@@ -334,18 +337,18 @@ void Injector_InitHooks()
   shadowNumBits--;
 
   // Update shadow buffer sizes (should be half of the above buffer size?)
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[win7], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[win7], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[win7], uint32_t(ShadowBufferSize));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[win7], uint32_t(ShadowBufferSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[version], uint32_t(ShadowBufferSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[version], uint32_t(ShadowBufferSize));
 
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[win7], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[win7], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[win7], uint32_t(ShadowBufferSize));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[win7], uint32_t(ShadowBufferSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[version], uint32_t(ShadowBufferSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[version], uint32_t(ShadowBufferSize));
 
   // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
-  SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[win7], uint32_t(ShadowBufferSize));
+  SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version], uint32_t(ShadowBufferSize));
 }
 
 
@@ -480,7 +483,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod 0.53 - by emoose\n");
+  printf("NieR Automata LodMod 0.54 - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
