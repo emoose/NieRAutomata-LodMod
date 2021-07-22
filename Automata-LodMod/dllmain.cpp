@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include <filesystem>
 
+HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
@@ -10,13 +11,13 @@ enum GameVersion {
   UWP
 };
 
-// Arrays below are [Win10 exe, Win7 exe]
+// Arrays below are [Win10 exe, Win7 exe, UWP/MSStore exe]
+
 // Address of PE header timestamp, so we can check what EXE is being used
 const uint32_t TimestampAddr[] = { 0x178, 0x1A8, 0x180 };
 const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254 };
 
 // Addresses of game functions/vars
-
 const uint32_t GetSaveFolder_Addr[] = { 0x7A5790, 0x79D570, 0x7CB040 };
 
 const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90 };
@@ -194,7 +195,7 @@ void* AO_CreateTextureBuffer_Hook(void* texture, uint32_t width, uint32_t height
 void PatchCall(uintptr_t callAddr, uintptr_t callDest)
 {
   uint8_t callBuf[] = { 0xE8, 0x00, 0x00, 0x00, 0x00 };
-  uint32_t diff = callDest - (callAddr + 5);
+  uint32_t diff = uint32_t(callDest - (callAddr + 5));
   *(uint32_t*)&callBuf[1] = diff;
 
   SafeWrite(callAddr, callBuf, 5);
@@ -216,18 +217,16 @@ void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
   return ShadowDistanceReader_Orig(a1, a2, a3, a4);
 }
 
-bool injected = false;
 WCHAR IniPath[4096];
 char IniPathA[4096];
 
+bool injected = false;
 void Injector_InitHooks()
 {
   if (injected) {
     return;
   }
   injected = true;
-
-  MH_Initialize();
 
   int version = GameVersion::Win10;
   if (*(uint32_t*)(mBaseAddress + TimestampAddr[0]) != Timestamp[0])
@@ -244,56 +243,51 @@ void Injector_InitHooks()
     }
   }
 
-  // Get folder path of currently running EXE
-  GetModuleFileName(GameHModule, IniPath, 4096);
-  int len = wcslen(IniPath);
-  int lastPathSep = -1;
-  for (int i = len - 2; i >= 0; i--)
-  {
-    if (IniPath[i] == '\\' || IniPath[i] == '/')
-    {
-      lastPathSep = i;
-      break;
-    }
-  }
+  MH_Initialize();
 
-  if (lastPathSep >= 0)
-  {
-    IniPath[lastPathSep + 1] = 0;
+  // Try loading config INI:
+  memset(IniPath, 0, 4096 * sizeof(WCHAR));
+
+  // Check for INI inside LodMod DLLs folder first
+  if (GetModuleFolder(DllHModule, IniPath, 4096))
     swprintf_s(IniPath, L"%s/LodMod.ini", IniPath);
 
-    if (!FileExists(IniPath))
-    {
-      // Try checking games save folder
-      // Win7/Win10: Documents\My Games\NieR_Automata
-      // UWP: Documents\My Games\NieR_Automata_PC
+  if (!FileExists(IniPath))
+  {
+    // Doesn't exist in DLL folder, try game EXE folder
+    if (GetModuleFolder(GameHModule, IniPath, 4096))
+      swprintf_s(IniPath, L"%s/LodMod.ini", IniPath);
+  }
 
-      typedef BOOL(*GetSaveFolder_Fn)(char* DstBuf, size_t SizeInBytes);
-      GetSaveFolder_Fn GetSaveFolder_Orig = (GetSaveFolder_Fn)(mBaseAddress + GetSaveFolder_Addr[version]);
-      if (GetSaveFolder_Orig(IniPathA, 4096))
-      {
-        swprintf_s(IniPath, L"%S/LodMod.ini", IniPathA);
-      }
-    }
+  if (!FileExists(IniPath))
+  {
+    // Doesn't exist in DLL/EXE folder, try checking games save folder
+    // Win7/Win10: Documents\My Games\NieR_Automata
+    // UWP: Documents\My Games\NieR_Automata_PC
 
-    if (FileExists(IniPath))
-    {
-      LODMultiplier = INI_GetFloat(IniPath, L"LodMod", L"LODMultiplier", 0);
-      AOMultiplier = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplier", 1);
-      ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
-      ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
-      ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
+    typedef BOOL(*GetSaveFolder_Fn)(char* DstBuf, size_t SizeInBytes);
+    GetSaveFolder_Fn GetSaveFolder_Orig = (GetSaveFolder_Fn)(mBaseAddress + GetSaveFolder_Addr[version]);
+    if (GetSaveFolder_Orig(IniPathA, 4096))
+      swprintf_s(IniPath, L"%S/LodMod.ini", IniPathA);
+  }
 
-      // Old INI keynames...
-      if (INI_GetBool(IniPath, L"LodMod", L"DisableLODs", false))
-        LODMultiplier = 0;
+  if (FileExists(IniPath))
+  {
+    LODMultiplier = INI_GetFloat(IniPath, L"LodMod", L"LODMultiplier", 0);
+    AOMultiplier = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplier", 1);
+    ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
+    ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
+    ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
 
-      if (INI_GetBool(IniPath, L"LodMod", L"FullResAO", false))
-        AOMultiplier = 2;
+    // Old INI keynames...
+    if (INI_GetBool(IniPath, L"LodMod", L"DisableLODs", false))
+      LODMultiplier = 0;
 
-      // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
-      AOMultiplier = fmaxf(fminf(AOMultiplier, 2), 0.1f);
-    }
+    if (INI_GetBool(IniPath, L"LodMod", L"FullResAO", false))
+      AOMultiplier = 2;
+
+    // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
+    AOMultiplier = fmaxf(fminf(AOMultiplier, 2), 0.1f);
   }
 
   SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[version];
@@ -354,7 +348,7 @@ void Injector_InitHooks()
   }
   shadowNumBits--;
 
-  // Update shadow buffer sizes (should be half of the above buffer size?)
+  // Update shadow quadrant sizes
   SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[version], uint8_t(shadowNumBits));
   SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[version], uint8_t(shadowNumBits));
   SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[version], uint32_t(ShadowBufferSize));
@@ -513,8 +507,6 @@ void InitPlugin()
   Injector_InitSteamStub();
 }
 
-HMODULE ourModule;
-
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved
@@ -523,7 +515,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
   switch (ul_reason_for_call)
   {
   case DLL_PROCESS_ATTACH:
-    ourModule = hModule;
+    DllHModule = hModule;
 
     bool Proxy_Attach(); // proxy.cpp
     Proxy_Attach();

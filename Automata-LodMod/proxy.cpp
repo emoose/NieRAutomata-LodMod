@@ -170,7 +170,7 @@ HMODULE origModule = NULL;
 
 bool Proxy_Attach()
 {
-  extern HMODULE ourModule;
+  extern HMODULE DllHModule;
 
   // get the filename of our DLL and try loading the DLL with the same name from system dir
   WCHAR modulePath[MAX_PATH] = { 0 };
@@ -178,7 +178,7 @@ bool Proxy_Attach()
     return false;
 
   WCHAR ourModulePath[MAX_PATH] = { 0 };
-  GetModuleFileNameW(ourModule, ourModulePath, _countof(ourModulePath));
+  GetModuleFileNameW(DllHModule, ourModulePath, _countof(ourModulePath));
 
   WCHAR exeName[MAX_PATH] = { 0 };
   WCHAR extName[MAX_PATH] = { 0 };

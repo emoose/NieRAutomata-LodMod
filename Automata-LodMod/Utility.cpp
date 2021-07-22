@@ -21,6 +21,9 @@ float INI_GetFloat(const WCHAR* IniPath, const WCHAR* Section, const WCHAR* Key,
 
 bool FileExists(const WCHAR* Filename)
 {
+  if (wcslen(Filename) <= 0)
+    return false;
+
   DWORD dwAttrib = GetFileAttributesW(Filename);
   return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
 }
@@ -29,6 +32,29 @@ bool DirExists(const WCHAR* DirPath)
 {
   DWORD dwAttrib = GetFileAttributesW(DirPath);
   return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY);
+}
+
+bool GetModuleFolder(HMODULE module, WCHAR* destBuf, int bufLength)
+{
+  // Get folder path of currently running EXE
+  GetModuleFileName(module, destBuf, bufLength);
+  size_t len = wcslen(destBuf);
+  size_t lastPathSep = 0;
+  for (size_t i = len - 2; i >= 0; i--)
+  {
+    if (destBuf[i] == '\\' || destBuf[i] == '/')
+    {
+      lastPathSep = i;
+      break;
+    }
+  }
+
+  if (lastPathSep > 0)
+  {
+    destBuf[lastPathSep + 1] = 0;
+    return true;
+  }
+  return false;
 }
 
 // Code to get main window HWND from https://stackoverflow.com/questions/1888863/how-to-get-main-window-handle-from-process-id

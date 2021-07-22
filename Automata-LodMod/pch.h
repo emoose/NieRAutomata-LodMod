@@ -11,6 +11,8 @@ extern uintptr_t mBaseAddress;
 // Utility.cpp
 bool FileExists(const WCHAR* Filename);
 bool DirExists(const WCHAR* DirPath);
+bool GetModuleFolder(HMODULE module, WCHAR* destBuf, int bufLength);
+
 HWND FindMainWindow(DWORD process_id);
 
 bool INI_GetBool(const WCHAR* IniPath, const WCHAR* Section, const WCHAR* Key, bool DefaultValue);

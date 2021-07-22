@@ -136,7 +136,7 @@
       <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\dinput8.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -162,7 +162,7 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\dinput8.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-CI|Win32'">
@@ -188,7 +188,7 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\dinput8.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -209,7 +209,7 @@
       <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\dinput8.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -235,7 +235,7 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\dinput8.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-CI|x64'">
@@ -261,7 +261,7 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\dinput8.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
