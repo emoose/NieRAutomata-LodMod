@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <sstream>
+#include <fstream>
 
 bool INI_GetBool(const WCHAR* IniPath, const WCHAR* Section, const WCHAR* Key, bool DefaultValue)
 {
@@ -32,6 +33,29 @@ bool DirExists(const WCHAR* DirPath)
 {
   DWORD dwAttrib = GetFileAttributesW(DirPath);
   return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY);
+}
+
+bool GetModuleName(HMODULE module, WCHAR* destBuf, int bufLength)
+{
+  // Get folder path of currently running EXE
+  GetModuleFileName(module, destBuf, bufLength);
+  size_t len = wcslen(destBuf);
+  size_t lastPathSep = 0;
+  for (size_t i = len - 2; i >= 0; i--)
+  {
+    if (destBuf[i] == '\\' || destBuf[i] == '/')
+    {
+      lastPathSep = i;
+      break;
+    }
+  }
+
+  if (lastPathSep > 0)
+  {
+    wcscpy_s(destBuf, bufLength, destBuf + lastPathSep + 1);
+    return true;
+  }
+  return false;
 }
 
 bool GetModuleFolder(HMODULE module, WCHAR* destBuf, int bufLength)
@@ -91,4 +115,29 @@ HWND FindMainWindow(DWORD process_id)
 
   EnumWindows(enum_windows_callback, (LPARAM)&data);
   return data.window_handle;
+}
+
+extern WCHAR LogPath[4096];
+extern bool DebugLog;
+
+void dlog(const char* Format, ...)
+{
+  if (!DebugLog)
+    return;
+
+  char* str = new char[4096];
+  va_list ap;
+  va_start(ap, Format);
+
+  vsnprintf(str, 4096, Format, ap);
+  va_end(ap);
+
+  std::ofstream file;
+  file.open(LogPath, std::ofstream::out | std::ofstream::app);
+  if (!file.is_open())
+    return; // wtf
+
+  file << str;
+
+  file.close();
 }

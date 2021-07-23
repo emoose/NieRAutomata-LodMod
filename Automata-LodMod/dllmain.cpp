@@ -5,6 +5,8 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
+#define LODMOD_VERSION "0.6"
+
 enum GameVersion {
   Win10 = 0,
   Win7,
@@ -43,6 +45,9 @@ uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F };
 
 uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421 };
 
+// For validating that game set ShadowBuffSizeBits to what we wanted...
+uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4 };
+
 // SAO CreateTextureBuffer call hooks:
 uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870 };
 uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2 };
@@ -52,11 +57,16 @@ uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46 };
 uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4 };
 
 // Configurables
+bool DebugLog = false;
 float LODMultiplier = 0; // if set to 0 will disable LODs
 float AOMultiplier = 1;
 float ShadowMinimumDistance = 0;
 float ShadowMaximumDistance = 0;
 int ShadowBufferSize = 2048; // can be set to 2048+
+
+// Calculated stuff
+int version = 0; // which GameVersion we're injected into
+int ExpectedShadowBuffSizeBits = 1; // to check against ShadowBuffSizeBits_Addr
 
 #pragma pack(push, 1)
 struct NA_Mesh
@@ -173,9 +183,8 @@ IsAOAllowed_Fn IsAOAllowed_Orig;
 uint32_t SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[0];
 uint32_t IsAOAllowed_Hook(void* a1)
 {
-  if (!IsAOAllowed_Orig(a1)) {
+  if (!IsAOAllowed_Orig(a1))
     return false;
-  }
 
   auto result = *(uint32_t*)(mBaseAddress + SettingAddr_AOEnabled) != 0;
   return result;
@@ -188,6 +197,10 @@ void* AO_CreateTextureBuffer_Hook(void* texture, uint32_t width, uint32_t height
 {
   float width_new = (float)width * AOMultiplier;
   float height_new = (float)height * AOMultiplier;
+
+  // This hook is only called 3 times, so lets log it if we can
+  if (DebugLog)
+    dlog("AO_CreateTextureBuffer_Hook(%dx%d) - setting resolution to AOMultiplier (%fx) = %dx%d (will be scaled with game render resolution)\n", width, height, AOMultiplier, (uint32_t)width_new, (uint32_t)height_new);
 
   return CreateTextureBuffer_Orig(texture, (uint32_t)width_new, (uint32_t)height_new, a4, a5, a6, a7, a8, a9, a10, a11, a12);
 }
@@ -206,8 +219,27 @@ void PatchCall(uintptr_t callAddr, uintptr_t callDest)
 // (atm this is just hooking the function that reads it/handles setting up shadow stuff from it, which is ran every frame...)
 typedef void*(*ShadowDistanceReader_Fn)(void* a1, void* a2, void* a3, void* a4);
 ShadowDistanceReader_Fn ShadowDistanceReader_Orig;
+
+bool CheckedShadowBuffSizeBits = false;
 void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
 {
+  if (!CheckedShadowBuffSizeBits && DebugLog)
+  {
+    // Verify that game set the ShadowBuffSizeBits to what we asked (ExpectedShadowBuffSizeBits)
+    // If it's not, that likely means we were injected into the game after the shadow-init code has been ran....
+
+    auto ShadowBuffSizeBits = *(uint32_t*)(mBaseAddress + ShadowBuffSizeBits_Addr[version]);
+    dlog("ShadowDistanceReader_Hook: ShadowBuffSizeBits = %d, ExpectedShadowBuffSizeBits = %d\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
+    if (ExpectedShadowBuffSizeBits != ShadowBuffSizeBits)
+    {
+      dlog("\nError: games current ShadowBuffSizeBits (%d) doesn't match the value we tried to set (%d)!\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
+      dlog("This will likely mean shadow resolution won't be updated properly, probably resulting in strange artifacts!\n");
+      dlog("(this might be caused by LodMod being injected into the game _after_ shadow-init code has been ran - maybe try a different inject method)\n\n");
+    }
+
+    CheckedShadowBuffSizeBits = true;
+  }
+
   float* distance = (float*)(a1 + 0x14);
   if (ShadowMinimumDistance > 0 && *distance < ShadowMinimumDistance)
     *distance = ShadowMinimumDistance;
@@ -217,18 +249,21 @@ void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
   return ShadowDistanceReader_Orig(a1, a2, a3, a4);
 }
 
+WCHAR ModuleName[4096];
+WCHAR IniDir[4096];
 WCHAR IniPath[4096];
 char IniPathA[4096];
+WCHAR LogPath[4096];
 
 bool injected = false;
 void Injector_InitHooks()
 {
-  if (injected) {
+  if (injected)
     return;
-  }
+
   injected = true;
 
-  int version = GameVersion::Win10;
+  version = GameVersion::Win10;
   if (*(uint32_t*)(mBaseAddress + TimestampAddr[0]) != Timestamp[0])
   {
     version = GameVersion::Win7;
@@ -246,17 +281,19 @@ void Injector_InitHooks()
   MH_Initialize();
 
   // Try loading config INI:
+  memset(IniDir, 0, 4096 * sizeof(WCHAR));
   memset(IniPath, 0, 4096 * sizeof(WCHAR));
+  memset(LogPath, 0, 4096 * sizeof(WCHAR));
 
   // Check for INI inside LodMod DLLs folder first
-  if (GetModuleFolder(DllHModule, IniPath, 4096))
-    swprintf_s(IniPath, L"%s/LodMod.ini", IniPath);
+  if (GetModuleFolder(DllHModule, IniDir, 4096))
+    swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
 
   if (!FileExists(IniPath))
   {
     // Doesn't exist in DLL folder, try game EXE folder
-    if (GetModuleFolder(GameHModule, IniPath, 4096))
-      swprintf_s(IniPath, L"%s/LodMod.ini", IniPath);
+    if (GetModuleFolder(GameHModule, IniDir, 4096))
+      swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
   }
 
   if (!FileExists(IniPath))
@@ -268,11 +305,15 @@ void Injector_InitHooks()
     typedef BOOL(*GetSaveFolder_Fn)(char* DstBuf, size_t SizeInBytes);
     GetSaveFolder_Fn GetSaveFolder_Orig = (GetSaveFolder_Fn)(mBaseAddress + GetSaveFolder_Addr[version]);
     if (GetSaveFolder_Orig(IniPathA, 4096))
-      swprintf_s(IniPath, L"%S/LodMod.ini", IniPathA);
+    {
+      swprintf_s(IniPath, L"%SLodMod.ini", IniPathA);
+      swprintf_s(IniDir, L"%S", IniPathA);
+    }
   }
 
   if (FileExists(IniPath))
   {
+    DebugLog = INI_GetBool(IniPath, L"LodMod", L"DebugLog", false);
     LODMultiplier = INI_GetFloat(IniPath, L"LodMod", L"LODMultiplier", 0);
     AOMultiplier = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplier", 1);
     ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
@@ -288,6 +329,22 @@ void Injector_InitHooks()
 
     // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
     AOMultiplier = fmaxf(fminf(AOMultiplier, 2), 0.1f);
+
+    if (DebugLog)
+    {
+      swprintf_s(LogPath, L"%sLodMod.log", IniDir);
+
+      dlog("NieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
+      if (GetModuleName(DllHModule, ModuleName, 4096))
+        dlog("LodMod module name: %S\n", ModuleName);
+      dlog("Detected game type: %s\n", version == GameVersion::Win10 ? "Steam/Win10" : (version == GameVersion::Win7 ? "Steam/Win7" : "UWP/MS Store"));
+      dlog("Loaded INI from %S\n\nSettings:\n", IniPath);
+      dlog(" LODMultiplier: %f\n", LODMultiplier);
+      dlog(" AOMultiplier: %f\n", AOMultiplier);
+      dlog(" ShadowMinimumDistance: %f\n", ShadowMinimumDistance);
+      dlog(" ShadowMaximumDistance: %f\n", ShadowMaximumDistance);
+      dlog(" ShadowResolution: %d\n\n", ShadowBufferSize);
+    }
   }
 
   SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[version];
@@ -321,46 +378,66 @@ void Injector_InitHooks()
     PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
   }
 
+  dlog("Hooks complete!\n");
+
   // Shadow quality patch:
   // 
   // Code at this address sets a global var that's used to size different buffers based on it
   // Seems to always be set to 1 normally, but the code around it seems to be checking game render resolution
   // and sets it to 4 depending on some unknown resolution being detected, guess it was left incomplete?
+  // (update: seems its maybe set to 4 for 3840x2160 & 3200x1800, but I'm not sure how that would even work without the "Update shadow quadrant sizes" stuff below...)
   // Buffer size = value << 0xB
   int value = ShadowBufferSize >> 11;
-  if (value <= 0)
-    return; // can't go any lower than 2048
 
-  uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
-  *(uint32_t*)(&ShadowQualityPatch[1]) = value;
-  SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version], ShadowQualityPatch, 6);
-
-  // Size of each quadrant in shadowmap
-  ShadowBufferSize /= 2;
-
-  // Poor mans lzcnt...
-  int tempSize = ShadowBufferSize;
-  int shadowNumBits = 0;
-  while (tempSize)
+  // shadows can't go any lower than 2048
+  if (value > 0)
   {
-    tempSize /= 2;
-    shadowNumBits++;
+    dlog("\nPatching shadow buffer code...\n");
+    uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
+    *(uint32_t*)(&ShadowQualityPatch[1]) = value;
+    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version], ShadowQualityPatch, 6);
+
+    // Patch out the 3840x2160/3600x???? ShadowQuality = 4 code
+    uint8_t MovEaxEcx[] = { 0x89, 0xC8, 0x90, 0x90, 0x90 };
+    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovEaxEcx, 5);
+
+    ExpectedShadowBuffSizeBits = value;
+
+    // Size of each quadrant in shadowmap
+    ShadowBufferSize /= 2;
+
+    dlog("Shadow quadrant size: %d\n", ShadowBufferSize);
+
+    dlog("ShadowBuffSizeBits: %d\n", ExpectedShadowBuffSizeBits);
+
+    // Poor mans lzcnt...
+    int tempSize = ShadowBufferSize;
+    int shadowNumBits = 0;
+    while (tempSize)
+    {
+      tempSize /= 2;
+      shadowNumBits++;
+    }
+    shadowNumBits--;
+
+    dlog("ShadowResNumBits: %d\n", shadowNumBits);
+
+    // Update shadow quadrant sizes
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[version], uint8_t(shadowNumBits));
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[version], uint8_t(shadowNumBits));
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[version], uint32_t(ShadowBufferSize));
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[version], uint32_t(ShadowBufferSize));
+
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[version], uint8_t(shadowNumBits));
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[version], uint8_t(shadowNumBits));
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[version], uint32_t(ShadowBufferSize));
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[version], uint32_t(ShadowBufferSize));
+
+    // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
+    SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version], uint32_t(ShadowBufferSize));
   }
-  shadowNumBits--;
 
-  // Update shadow quadrant sizes
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[version], uint32_t(ShadowBufferSize));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[version], uint32_t(ShadowBufferSize));
-
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[version], uint32_t(ShadowBufferSize));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[version], uint32_t(ShadowBufferSize));
-
-  // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
-  SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version], uint32_t(ShadowBufferSize));
+  dlog("\nLodMod init complete!\n\n");
 }
 
 
@@ -495,7 +572,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod 0.54 - by emoose\n");
+  printf("NieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 

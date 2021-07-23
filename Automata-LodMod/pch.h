@@ -11,12 +11,15 @@ extern uintptr_t mBaseAddress;
 // Utility.cpp
 bool FileExists(const WCHAR* Filename);
 bool DirExists(const WCHAR* DirPath);
+bool GetModuleName(HMODULE module, WCHAR* destBuf, int bufLength);
 bool GetModuleFolder(HMODULE module, WCHAR* destBuf, int bufLength);
 
 HWND FindMainWindow(DWORD process_id);
 
 bool INI_GetBool(const WCHAR* IniPath, const WCHAR* Section, const WCHAR* Key, bool DefaultValue);
 float INI_GetFloat(const WCHAR* IniPath, const WCHAR* Section, const WCHAR* Key, float DefaultValue);
+
+void dlog(const char* Format, ...);
 
 template <typename T>
 void SafeWrite(uintptr_t address, T value)

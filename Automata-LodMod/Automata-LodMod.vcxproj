@@ -133,10 +133,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -158,11 +158,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-CI|Win32'">
@@ -184,11 +184,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -206,10 +206,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -231,11 +231,11 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-CI|x64'">
@@ -257,11 +257,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
-      <OutputFile>$(OutDir)xinput1_3$(TargetExt)</OutputFile>
+      <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_3.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\LodMod.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
