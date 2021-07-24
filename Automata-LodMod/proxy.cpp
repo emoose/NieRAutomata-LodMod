@@ -38,11 +38,9 @@ XInputGetDSoundAudioDeviceGuids_ptr XInputGetDSoundAudioDeviceGuids_orig;
 XInputGetBatteryInformation_ptr XInputGetBatteryInformation_orig;
 XInputGetKeystroke_ptr XInputGetKeystroke_orig;
 
-// xinput1_3 needs everything at the proper ordinal, proxy.def handles that, but we need something for ordinal 1 so:
-PLUGIN_API void DllMain_stub()
-{
-
-}
+// XInput1_4
+typedef DWORD(WINAPI* XInputGetAudioDeviceIds_ptr)(DWORD dwUserIndex, LPWSTR pRenderDeviceId, UINT* pRenderCount, LPWSTR pCaptureDeviceId, UINT* pCaptureCount);
+XInputGetAudioDeviceIds_ptr XInputGetAudioDeviceIds_orig;
 
 PLUGIN_API DWORD WINAPI XInputGetState(DWORD dwUserIndex, void* pState)
 {
@@ -77,6 +75,11 @@ PLUGIN_API DWORD WINAPI XInputGetBatteryInformation(DWORD dwUserIndex, BYTE devT
 PLUGIN_API DWORD WINAPI XInputGetKeystroke(DWORD dwUserIndex, DWORD dwReserved, void* pKeystroke)
 {
   return XInputGetKeystroke_orig(dwUserIndex, dwReserved, pKeystroke);
+}
+
+PLUGIN_API DWORD WINAPI XInputGetAudioDeviceIds(DWORD dwUserIndex, LPWSTR pRenderDeviceId, UINT* pRenderCount, LPWSTR pCaptureDeviceId, UINT* pCaptureCount)
+{
+  return XInputGetAudioDeviceIds_orig(dwUserIndex, pRenderDeviceId, pRenderCount, pCaptureDeviceId, pCaptureCount);
 }
 
 //dinput8.dll
@@ -190,6 +193,8 @@ bool Proxy_Attach()
   if (!origModule)
     return false;
 
+  DirectInput8Create_orig = (DirectInput8Create_ptr)GetProcAddress(origModule, "DirectInput8Create");
+
   XInputGetCapabilities_orig = (XInputGetCapabilities_ptr)GetProcAddress(origModule, "XInputGetCapabilities");
   XInputGetDSoundAudioDeviceGuids_orig = (XInputGetDSoundAudioDeviceGuids_ptr)GetProcAddress(origModule, "XInputGetDSoundAudioDeviceGuids");
   XInputGetState_orig = (XInputGetState_ptr)GetProcAddress(origModule, "XInputGetState");
@@ -197,8 +202,7 @@ bool Proxy_Attach()
   XInputEnable_orig = (XInputEnable_ptr)GetProcAddress(origModule, "XInputEnable");
   XInputGetBatteryInformation_orig = (XInputGetBatteryInformation_ptr)GetProcAddress(origModule, "XInputGetBatteryInformation");
   XInputGetKeystroke_orig = (XInputGetKeystroke_ptr)GetProcAddress(origModule, "XInputGetKeystroke");
-
-  DirectInput8Create_orig = (DirectInput8Create_ptr)GetProcAddress(origModule, "DirectInput8Create");
+  XInputGetAudioDeviceIds_orig = (XInputGetAudioDeviceIds_ptr)GetProcAddress(origModule, "XInputGetAudioDeviceIds");
 
   DXGIDumpJournal_orig = (DXGIDumpJournal_ptr)GetProcAddress(origModule, "DXGIDumpJournal");
   CreateDXGIFactory_orig = (CreateDXGIFactory_ptr)GetProcAddress(origModule, "CreateDXGIFactory");
