@@ -5,7 +5,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.61"
+#define LODMOD_VERSION "0.62"
 
 enum GameVersion {
   Win10 = 0,
@@ -74,9 +74,11 @@ int version = 0; // which GameVersion we're injected into
 int ExpectedShadowBuffSizeBits = 1; // to check against ShadowBuffSizeBits_Addr
 
 #pragma pack(push, 1)
-struct NA_Mesh
+class BehaviorScr // name from game EXE
 {
-  /* 0x000 */ uint8_t Unk0[0x390];
+  virtual ~BehaviorScr() = 0; // for vftable
+public:
+  /* 0x008 */ uint8_t Unk0[0x388];
   /* 0x390 */ void* ShadowArray; // some kind of array/vector related with shadows, "ShadowCast" flag affects something in the entries
   /* 0x398 */ uint8_t Unk398[0x58];
   /* 0x3F0 */ float* DistRates; // pointer to "DistRate0"-"DistRate3"
@@ -98,6 +100,8 @@ struct NA_Mesh
   /* 0x58C */ uint32_t Unk58C;
   /* 0x590 */ uint8_t Unk590[0x58];
   /* 0x5E8 */ float BloomStrength; // always 0 or 1 ?
+  /* 0x5EC */ uint32_t Unk5EC;
+  /* 0x5F0 */ uint8_t Unk5F0[0x300];
 
   void DisableLODs()
   {
@@ -130,53 +134,70 @@ struct NA_Mesh
     }
   }
 };
-static_assert(sizeof(NA_Mesh) == 0x5EC); // not proper size lol
+static_assert(sizeof(BehaviorScr) == 0x8F0); // should be correct size
+
+class cShadowParam // name from EXE
+{
+  virtual ~cShadowParam() = 0; // for vftable
+public:
+  /* 0x008 */ uint32_t UnkDword8;
+  /* 0x00C */ uint32_t UnkDwordC;
+  /* 0x010 */ float UnkFloat10;
+  /* 0x014 */ float ShadowDistances[4];
+
+  // Next few are something to do with shadow-caster position/rotation?
+  /* 0x024 */ float UnkParams1[4];
+  /* 0x034 */ float UnkParams2[4];
+
+  /* 0x044 */ float UnkFloat44;
+};
+static_assert(sizeof(cShadowParam) == 0x48); // should be correct size
 #pragma pack(pop)
 
-typedef void* (*sub_84CD60_Fn)(void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8);
+typedef void* (*sub_84CD60_Fn)(BehaviorScr* thisptr, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8);
 sub_84CD60_Fn sub_84CD60_Orig;
-void* sub_84CD60_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
+void* sub_84CD60_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
   if (LODMultiplier <= 0)
   {
     // In case something in orig function depends on LOD details, disable them first
-    a1->DisableLODs();
+    thisptr->DisableLODs();
   }
 
-  auto ret = sub_84CD60_Orig(a1, a2, a3, a4, a5, a6, a7, a8);
+  auto ret = sub_84CD60_Orig(thisptr, a2, a3, a4, a5, a6, a7, a8);
 
   if (LODMultiplier <= 0)
   {
     // Make sure LOD data is disabled
-    a1->DisableLODs();
+    thisptr->DisableLODs();
   }
   else
   {
-    a1->MultiplyLODs(LODMultiplier);
+    thisptr->MultiplyLODs(LODMultiplier);
   }
 
   return ret;
 }
 
 sub_84CD60_Fn sub_84D070_Orig;
-void* sub_84D070_Hook(NA_Mesh* a1, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
+void* sub_84D070_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
   if (LODMultiplier <= 0)
   {
     // In case something in orig function depends on LOD details, disable them first
-    a1->DisableLODs();
+    thisptr->DisableLODs();
   }
 
-  auto ret = sub_84D070_Orig(a1, a2, a3, a4, a5, a6, a7, a8);
+  auto ret = sub_84D070_Orig(thisptr, a2, a3, a4, a5, a6, a7, a8);
 
   if (LODMultiplier <= 0)
   {
     // Make sure LOD data is disabled
-    a1->DisableLODs();
+    thisptr->DisableLODs();
   }
   else
   {
-    a1->MultiplyLODs(LODMultiplier);
+    thisptr->MultiplyLODs(LODMultiplier);
   }
 
   return ret;
@@ -222,11 +243,11 @@ void PatchCall(uintptr_t callAddr, uintptr_t callDest)
 // TODO: need to find where the shadow distance is set originally and hook there instead
 // That way we could double/half/etc instead of needing to set to a static value
 // (atm this is just hooking the function that reads it/handles setting up shadow stuff from it, which is ran every frame...)
-typedef void*(*ShadowDistanceReader_Fn)(void* a1, void* a2, void* a3, void* a4);
+typedef void*(*ShadowDistanceReader_Fn)(cShadowParam* thisptr, void* a2, void* a3, void* a4);
 ShadowDistanceReader_Fn ShadowDistanceReader_Orig;
 
 bool CheckedShadowBuffSizeBits = false;
-void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
+void* ShadowDistanceReader_Hook(cShadowParam* thisptr, void* a2, void* a3, void* a4)
 {
   if (!CheckedShadowBuffSizeBits && DebugLog)
   {
@@ -246,13 +267,30 @@ void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
     CheckedShadowBuffSizeBits = true;
   }
 
-  float* distance = (float*)(a1 + 0x14);
-  if (ShadowMinimumDistance > 0 && *distance < ShadowMinimumDistance)
-    *distance = ShadowMinimumDistance;
-  if (ShadowMaximumDistance > 0 && *distance > ShadowMaximumDistance)
-    *distance = ShadowMaximumDistance;
+  float* distances = thisptr->ShadowDistances;
 
-  return ShadowDistanceReader_Orig(a1, a2, a3, a4);
+  bool updated = false;
+  if (ShadowMinimumDistance > 0 && distances[0] < ShadowMinimumDistance)
+  {
+    distances[0] = ShadowMinimumDistance;
+    updated = true;
+  }
+  if (ShadowMaximumDistance > 0 && distances[0] > ShadowMaximumDistance)
+  {
+    distances[0] = ShadowMaximumDistance;
+    updated = true;
+  }
+
+  if (updated)
+  {
+    // update the other 3 shadow-map levels/quadrants
+    // multipliers below mostly seem to match with how games values are setup
+    distances[1] = distances[0] * 4;
+    distances[2] = distances[0] * 20;
+    distances[3] = distances[0] * 40;
+  }
+
+  return ShadowDistanceReader_Orig(thisptr, a2, a3, a4);
 }
 
 WCHAR ModuleName[4096];
