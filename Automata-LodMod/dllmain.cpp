@@ -56,6 +56,10 @@ uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A };
 uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46 };
 uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4 };
 
+// Others
+uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058 };
+uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC };
+
 // Configurables
 bool DebugLog = false;
 float LODMultiplier = 0; // if set to 0 will disable LODs
@@ -63,6 +67,7 @@ float AOMultiplier = 1;
 float ShadowMinimumDistance = 0;
 float ShadowMaximumDistance = 0;
 int ShadowBufferSize = 2048; // can be set to 2048+
+int CommunicationScreenResolution = 256;
 
 // Calculated stuff
 int version = 0; // which GameVersion we're injected into
@@ -234,7 +239,8 @@ void* ShadowDistanceReader_Hook(BYTE* a1, void* a2, void* a3, void* a4)
     {
       dlog("\nError: games current ShadowBuffSizeBits (%d) doesn't match the value we tried to set (%d)!\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
       dlog("This will likely mean shadow resolution won't be updated properly, probably resulting in strange artifacts!\n");
-      dlog("(this might be caused by LodMod being injected into the game _after_ shadow-init code has been ran - maybe try a different inject method)\n\n");
+      dlog("(this might be caused by LodMod being injected into the game _after_ shadow-init code has been ran - maybe try a different inject method)\n");
+      dlog("If using SpecialK's Import feature to load in LodMod maybe using 'When=Lazy' can help.\n\n");
     }
 
     CheckedShadowBuffSizeBits = true;
@@ -319,6 +325,7 @@ void Injector_InitHooks()
     ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
     ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
     ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
+    CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", 256, IniPath);
 
     // Old INI keynames...
     if (INI_GetBool(IniPath, L"LodMod", L"DisableLODs", false))
@@ -343,7 +350,8 @@ void Injector_InitHooks()
       dlog(" AOMultiplier: %f\n", AOMultiplier);
       dlog(" ShadowMinimumDistance: %f\n", ShadowMinimumDistance);
       dlog(" ShadowMaximumDistance: %f\n", ShadowMaximumDistance);
-      dlog(" ShadowResolution: %d\n\n", ShadowBufferSize);
+      dlog(" ShadowResolution: %d\n", ShadowBufferSize);
+      dlog(" CommunicationScreenResolution: %d\n\n", CommunicationScreenResolution);
     }
   }
 
@@ -380,6 +388,12 @@ void Injector_InitHooks()
 
   dlog("Hooks complete!\n");
 
+  if (CommunicationScreenResolution != 256)
+  {
+    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version], CommunicationScreenResolution);
+    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version], CommunicationScreenResolution);
+  }
+
   // Shadow quality patch:
   // 
   // Code at this address sets a global var that's used to size different buffers based on it
@@ -397,7 +411,7 @@ void Injector_InitHooks()
     *(uint32_t*)(&ShadowQualityPatch[1]) = value;
     SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version], ShadowQualityPatch, 6);
 
-    // Patch out the 3840x2160/3600x???? ShadowQuality = 4 code
+    // Patch out the 3840x2160/3200x1800 ShadowQuality = 4 code
     uint8_t MovEaxEcx[] = { 0x89, 0xC8, 0x90, 0x90, 0x90 };
     SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovEaxEcx, 5);
 
@@ -572,7 +586,7 @@ void Injector_InitSteamStub()
 
 void InitPlugin()
 {
-  printf("NieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
+  printf("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
