@@ -5,7 +5,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.62"
+#define LODMOD_VERSION "0.63"
 
 enum GameVersion {
   Win10 = 0,
