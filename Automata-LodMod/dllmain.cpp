@@ -249,7 +249,7 @@ ShadowDistanceReader_Fn ShadowDistanceReader_Orig;
 bool CheckedShadowBuffSizeBits = false;
 void* ShadowDistanceReader_Hook(cShadowParam* thisptr, void* a2, void* a3, void* a4)
 {
-  if (!CheckedShadowBuffSizeBits && DebugLog)
+  if (!CheckedShadowBuffSizeBits && DebugLog && ExpectedShadowBuffSizeBits > 0)
   {
     // Verify that game set the ShadowBuffSizeBits to what we asked (ExpectedShadowBuffSizeBits)
     // If it's not, that likely means we were injected into the game after the shadow-init code has been ran....
@@ -269,25 +269,25 @@ void* ShadowDistanceReader_Hook(cShadowParam* thisptr, void* a2, void* a3, void*
 
   float* distances = thisptr->ShadowDistances;
 
-  bool updated = false;
+  float new_distance = 0;
   if (ShadowMinimumDistance > 0 && distances[0] < ShadowMinimumDistance)
-  {
-    distances[0] = ShadowMinimumDistance;
-    updated = true;
-  }
-  if (ShadowMaximumDistance > 0 && distances[0] > ShadowMaximumDistance)
-  {
-    distances[0] = ShadowMaximumDistance;
-    updated = true;
-  }
+    new_distance = ShadowMinimumDistance;
 
-  if (updated)
-  {
-    // update the other 3 shadow-map levels/quadrants
-    // multipliers below mostly seem to match with how games values are setup
-    distances[1] = distances[0] * 4;
-    distances[2] = distances[0] * 20;
-    distances[3] = distances[0] * 40;
+  if (ShadowMaximumDistance > 0 && distances[0] > ShadowMaximumDistance)
+    new_distance = ShadowMaximumDistance;
+
+  if (new_distance > 0) {
+    // figure out the old cascade ratios
+    // (this is only run when distance is being updated first time for this area)
+    float ratios[] = {
+      distances[1] / distances[0],
+      distances[2] / distances[0],
+      distances[3] / distances[0]
+    };
+    distances[0] = new_distance;
+    distances[1] = new_distance * ratios[0];
+    distances[2] = new_distance * ratios[1];
+    distances[3] = new_distance * ratios[2];
   }
 
   return ShadowDistanceReader_Orig(thisptr, a2, a3, a4);
