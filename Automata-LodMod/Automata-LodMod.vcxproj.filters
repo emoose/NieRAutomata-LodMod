@@ -42,6 +42,9 @@
     <ClInclude Include="MinHook\hde\table64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SDK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

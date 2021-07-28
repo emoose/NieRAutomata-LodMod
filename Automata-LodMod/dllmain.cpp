@@ -1,11 +1,12 @@
 ﻿#include "pch.h"
 #include <filesystem>
+#include "SDK.h"
 
 HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.63"
+#define LODMOD_VERSION "0.64"
 
 enum GameVersion {
   Win10 = 0,
@@ -29,43 +30,49 @@ const uint32_t var_SettingAddr_AOEnabled[] = { 0x1421F58, 0x1414E48, 0x14A4B08 }
 
 const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0, 0x79A620 };
 
+const uint32_t cBinaryXml__Read_Addr[] = { 0x14C700, 0x14C530, 0x14C860 };
+
 const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70, 0x78E8A0 };
 
-uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354, 0x780E84 };
+const uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354, 0x780E84 };
 
-uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695, 0x78E1C5 };
-uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B, 0x78E1CB };
-uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7, 0x78E1E7 };
-uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD, 0x78E1ED };
+const uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695, 0x78E1C5 };
+const uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B, 0x78E1CB };
+const uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7, 0x78E1E7 };
+const uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD, 0x78E1ED };
 
-uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7, 0x78DFF7 };
-uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD, 0x78DFFD };
-uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9, 0x78E019 };
-uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F };
+const uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7, 0x78DFF7 };
+const uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD, 0x78DFFD };
+const uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9, 0x78E019 };
+const uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F };
 
-uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421 };
+const uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421 };
 
 // For validating that game set ShadowBuffSizeBits to what we wanted...
-uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4 };
+const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4 };
 
 // SAO CreateTextureBuffer call hooks:
-uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870 };
-uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2 };
+const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870 };
+const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2 };
 
-uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A };
-uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46 };
-uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4 };
+const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A };
+const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46 };
+const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4 };
 
 // Others
-uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058 };
-uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC };
+const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058 };
+const uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC };
 
 // Configurables
 bool DebugLog = false;
 float LODMultiplier = 0; // if set to 0 will disable LODs
 float AOMultiplier = 1;
-float ShadowMinimumDistance = 0;
-float ShadowMaximumDistance = 0;
+float ShadowDistanceMultiplier = 1;
+float ShadowDistanceMinimum = 0;
+float ShadowDistanceMaximum = 0;
+float ShadowFilterStrengthBias = 0;
+float ShadowFilterStrengthMinimum = 0;
+float ShadowFilterStrengthMaximum = 0;
 int ShadowBufferSize = 2048; // can be set to 2048+
 int CommunicationScreenResolution = 256;
 
@@ -73,86 +80,104 @@ int CommunicationScreenResolution = 256;
 int version = 0; // which GameVersion we're injected into
 int ExpectedShadowBuffSizeBits = 1; // to check against ShadowBuffSizeBits_Addr
 
-#pragma pack(push, 1)
-class BehaviorScr // name from game EXE
-{
-  virtual ~BehaviorScr() = 0; // for vftable
-public:
-  /* 0x008 */ uint8_t Unk0[0x388];
-  /* 0x390 */ void* ShadowArray; // some kind of array/vector related with shadows, "ShadowCast" flag affects something in the entries
-  /* 0x398 */ uint8_t Unk398[0x58];
-  /* 0x3F0 */ float* DistRates; // pointer to "DistRate0"-"DistRate3"
-  /* 0x3F8 */ uint32_t NumDistRates;
-  /* 0x3FC */ float Unk3FC;
-  /* 0x400 */ uint32_t Unk400; // "UseLostLOD", gets set if using dist rates?
-  /* 0x404 */ uint32_t Unk404; // if set, Unk3FC = 0.05 ?
-  /* 0x408 */ uint8_t Unk408[0x118];
-  /* 0x520 */ uint32_t Unk520; // "UseCullAABB" sets/removes 0x10 flag
-  /* 0x524 */ float Unk524;
-  /* 0x528 */ uint8_t Unk528[0x48];
-  /* 0x570 */ uint32_t Unk570; // "CamAlpha" sets to 1 or 0
-  /* 0x574 */ float Unk574;
-  /* 0x578 */ float Unk578; // "CamAlpha"
-  /* 0x57C */ float Unk57C;
-  /* 0x580 */ uint32_t Unk580;
-  /* 0x584 */ uint32_t AmbientOcclusionAllowed; // "AO_OFF" sets to 0
-  /* 0x588 */ uint32_t Unk588;
-  /* 0x58C */ uint32_t Unk58C;
-  /* 0x590 */ uint8_t Unk590[0x58];
-  /* 0x5E8 */ float BloomStrength; // always 0 or 1 ?
-  /* 0x5EC */ uint32_t Unk5EC;
-  /* 0x5F0 */ uint8_t Unk5F0[0x300];
+typedef void* (*cBinaryXml__Read_Fn)(struct cBinaryXml* thisptr, uint32_t a2, cObject* output);
+cBinaryXml__Read_Fn cBinaryXml__Read_Orig;
 
-  void DisableLODs()
+bool CheckedShadowBuffSizeBits = false;
+// likely not proper fn name
+void* cBinaryXml__Read_Hook(struct cBinaryXml* thisptr, uint32_t a2, cObject* output)
+{
+  auto result = cBinaryXml__Read_Orig(thisptr, a2, output);
+
+  auto* data = output->GetData();
+
+  // TODO: is there a better way than string compare?
+  if (strcmp(data->name, "cShadowParam"))
+    return result; // not cShadowParam
+
+  // Use this opportunity to check that game set the ShadowBuffSizeBits to what we asked (ExpectedShadowBuffSizeBits)
+  // If it's not, that likely means we were injected into the game after the shadow-init code has been ran....
+  if (!CheckedShadowBuffSizeBits && DebugLog && ExpectedShadowBuffSizeBits > 0)
   {
-    // Set all DistRates to 0
-    if (DistRates)
+    auto ShadowBuffSizeBits = *(uint32_t*)(mBaseAddress + ShadowBuffSizeBits_Addr[version]);
+    dlog("ShadowDistanceReader_Hook: ShadowBuffSizeBits = %d, ExpectedShadowBuffSizeBits = %d\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
+    if (ExpectedShadowBuffSizeBits != ShadowBuffSizeBits)
     {
-      memset(DistRates, 0, sizeof(float) * 4);
+      dlog("\nError: games current ShadowBuffSizeBits (%d) doesn't match the value we tried to set (%d)!\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
+      dlog("This will likely mean shadow resolution won't be updated properly, probably resulting in strange artifacts!\n");
+      dlog("(this might be caused by LodMod being injected into the game _after_ shadow-init code has been ran - maybe try a different inject method)\n");
+      dlog("If using SpecialK's Import feature to load in LodMod maybe using 'When=Lazy' can help.\n\n");
     }
 
-    // Set number of DistRates to 1 (0 causes weird issues)
-    NumDistRates = 1;
-
-    // Disable UseLostLOD
-    Unk400 = 0;
-    Unk404 = 0;
-
-    // Remove UseCullAABB flag
-    Unk520 &= 0xFFFFFFEF;
+    CheckedShadowBuffSizeBits = true;
   }
 
-  void MultiplyLODs(float multiplier)
+  auto* shadowParam = reinterpret_cast<cShadowParam*>(output);
+
+  float new_strength = shadowParam->m_bokeStrength[0];
+  if (ShadowFilterStrengthBias != 0)
   {
-    if (!DistRates || multiplier <= 0)
-      return;
-
-    for (uint32_t i = 0; i < NumDistRates; i++)
-    {
-      // DistRate needs to be made smaller to go further, idk how it works exactly
-      DistRates[i] /= multiplier;
-    }
+    new_strength = shadowParam->m_bokeStrength[0] + ShadowFilterStrengthBias;
+    if (new_strength < 0)
+      new_strength = 0;
   }
-};
-static_assert(sizeof(BehaviorScr) == 0x8F0); // should be correct size
 
-class cShadowParam // name from EXE
-{
-  virtual ~cShadowParam() = 0; // for vftable
-public:
-  /* 0x008 */ uint32_t UnkDword8;
-  /* 0x00C */ uint32_t UnkDwordC;
-  /* 0x010 */ float UnkFloat10;
-  /* 0x014 */ float ShadowDistances[4];
+  if (new_strength < ShadowFilterStrengthMinimum)
+    new_strength = ShadowFilterStrengthMinimum;
 
-  // Next few are something to do with shadow-caster position/rotation?
-  /* 0x024 */ float UnkParams1[4];
-  /* 0x034 */ float UnkParams2[4];
+  if (ShadowFilterStrengthMaximum != 0 && new_strength > ShadowFilterStrengthMaximum)
+    new_strength = ShadowFilterStrengthMaximum;
 
-  /* 0x044 */ float UnkFloat44;
-};
-static_assert(sizeof(cShadowParam) == 0x48); // should be correct size
-#pragma pack(pop)
+  if (new_strength != shadowParam->m_bokeStrength[0])
+  {
+    if (DebugLog)
+    {
+      dlog("cBinaryXml::Read: Updated shadow m_bokeStrength from %f to %f\n", shadowParam->m_bokeStrength[0], new_strength);
+    }
+    shadowParam->m_bokeStrength[0] = new_strength;
+  }
+
+  auto& distances = shadowParam->m_splitPoint;
+  float new_distances[4] = { distances[0], 0, 0, 0 };
+
+  if (ShadowDistanceMultiplier != 1)
+    new_distances[0] = distances[0] * ShadowDistanceMultiplier;
+
+  if (ShadowDistanceMinimum > 0 && new_distances[0] < ShadowDistanceMinimum)
+    new_distances[0] = ShadowDistanceMinimum;
+
+  if (ShadowDistanceMaximum > 0 && new_distances[0] > ShadowDistanceMaximum)
+    new_distances[0] = ShadowDistanceMaximum;
+
+  if (new_distances[0] != distances[0])
+  {
+    // figure out the old cascade ratios
+    // (this is only run when distance is being updated first time for this area)
+
+    float ratios[] = {
+      distances[1] / distances[0],
+      distances[2] / distances[0],
+      distances[3] / distances[0]
+    };
+
+    new_distances[1] = new_distances[0] * ratios[0];
+    new_distances[2] = new_distances[0] * ratios[1];
+    new_distances[3] = new_distances[0] * ratios[2];
+
+    if (DebugLog)
+    {
+      dlog("cBinaryXml::Read: Updating shadow m_splitPoint\n 0: %f -> %f\n 1: %f -> %f\n 2: %f -> %f\n 3: %f -> %f\n",
+        distances[0], new_distances[0],
+        distances[1], new_distances[1],
+        distances[2], new_distances[2],
+        distances[3], new_distances[3]);
+    }
+
+    std::copy_n(new_distances, 4, distances);
+  }
+
+  return result;
+}
 
 typedef void* (*sub_84CD60_Fn)(BehaviorScr* thisptr, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8);
 sub_84CD60_Fn sub_84CD60_Orig;
@@ -240,59 +265,6 @@ void PatchCall(uintptr_t callAddr, uintptr_t callDest)
   SafeWrite(callAddr, callBuf, 5);
 }
 
-// TODO: need to find where the shadow distance is set originally and hook there instead
-// That way we could double/half/etc instead of needing to set to a static value
-// (atm this is just hooking the function that reads it/handles setting up shadow stuff from it, which is ran every frame...)
-typedef void*(*ShadowDistanceReader_Fn)(cShadowParam* thisptr, void* a2, void* a3, void* a4);
-ShadowDistanceReader_Fn ShadowDistanceReader_Orig;
-
-bool CheckedShadowBuffSizeBits = false;
-void* ShadowDistanceReader_Hook(cShadowParam* thisptr, void* a2, void* a3, void* a4)
-{
-  if (!CheckedShadowBuffSizeBits && DebugLog && ExpectedShadowBuffSizeBits > 0)
-  {
-    // Verify that game set the ShadowBuffSizeBits to what we asked (ExpectedShadowBuffSizeBits)
-    // If it's not, that likely means we were injected into the game after the shadow-init code has been ran....
-
-    auto ShadowBuffSizeBits = *(uint32_t*)(mBaseAddress + ShadowBuffSizeBits_Addr[version]);
-    dlog("ShadowDistanceReader_Hook: ShadowBuffSizeBits = %d, ExpectedShadowBuffSizeBits = %d\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
-    if (ExpectedShadowBuffSizeBits != ShadowBuffSizeBits)
-    {
-      dlog("\nError: games current ShadowBuffSizeBits (%d) doesn't match the value we tried to set (%d)!\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
-      dlog("This will likely mean shadow resolution won't be updated properly, probably resulting in strange artifacts!\n");
-      dlog("(this might be caused by LodMod being injected into the game _after_ shadow-init code has been ran - maybe try a different inject method)\n");
-      dlog("If using SpecialK's Import feature to load in LodMod maybe using 'When=Lazy' can help.\n\n");
-    }
-
-    CheckedShadowBuffSizeBits = true;
-  }
-
-  float* distances = thisptr->ShadowDistances;
-
-  float new_distance = 0;
-  if (ShadowMinimumDistance > 0 && distances[0] < ShadowMinimumDistance)
-    new_distance = ShadowMinimumDistance;
-
-  if (ShadowMaximumDistance > 0 && distances[0] > ShadowMaximumDistance)
-    new_distance = ShadowMaximumDistance;
-
-  if (new_distance > 0) {
-    // figure out the old cascade ratios
-    // (this is only run when distance is being updated first time for this area)
-    float ratios[] = {
-      distances[1] / distances[0],
-      distances[2] / distances[0],
-      distances[3] / distances[0]
-    };
-    distances[0] = new_distance;
-    distances[1] = new_distance * ratios[0];
-    distances[2] = new_distance * ratios[1];
-    distances[3] = new_distance * ratios[2];
-  }
-
-  return ShadowDistanceReader_Orig(thisptr, a2, a3, a4);
-}
-
 WCHAR ModuleName[4096];
 WCHAR IniDir[4096];
 WCHAR IniPath[4096];
@@ -360,9 +332,13 @@ void Injector_InitHooks()
     DebugLog = INI_GetBool(IniPath, L"LodMod", L"DebugLog", false);
     LODMultiplier = INI_GetFloat(IniPath, L"LodMod", L"LODMultiplier", 0);
     AOMultiplier = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplier", 1);
-    ShadowMinimumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
-    ShadowMaximumDistance = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
+    ShadowDistanceMultiplier = INI_GetFloat(IniPath, L"LodMod", L"ShadowDistanceMultiplier", 1);
+    ShadowDistanceMinimum = INI_GetFloat(IniPath, L"LodMod", L"ShadowDistanceMinimum", 0);
+    ShadowDistanceMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowDistanceMaximum", 0);
     ShadowBufferSize = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
+    ShadowFilterStrengthBias = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthBias", 0);
+    ShadowFilterStrengthMinimum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMinimum", 0);
+    ShadowFilterStrengthMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMaximum", 0);
     CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", 256, IniPath);
 
     // Old INI keynames...
@@ -371,6 +347,13 @@ void Injector_InitHooks()
 
     if (INI_GetBool(IniPath, L"LodMod", L"FullResAO", false))
       AOMultiplier = 2;
+
+    auto old_dist = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
+    if (old_dist != 0)
+      ShadowDistanceMinimum = old_dist;
+    old_dist = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
+    if (old_dist != 0)
+      ShadowDistanceMaximum = old_dist;
 
     // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
     AOMultiplier = fmaxf(fminf(AOMultiplier, 2), 0.1f);
@@ -386,9 +369,13 @@ void Injector_InitHooks()
       dlog("Loaded INI from %S\n\nSettings:\n", IniPath);
       dlog(" LODMultiplier: %f\n", LODMultiplier);
       dlog(" AOMultiplier: %f\n", AOMultiplier);
-      dlog(" ShadowMinimumDistance: %f\n", ShadowMinimumDistance);
-      dlog(" ShadowMaximumDistance: %f\n", ShadowMaximumDistance);
+      dlog(" ShadowDistanceMultiplier: %f\n", ShadowDistanceMultiplier);
+      dlog(" ShadowDistanceMinimum: %f\n", ShadowDistanceMinimum);
+      dlog(" ShadowDistanceMaximum: %f\n", ShadowDistanceMaximum);
       dlog(" ShadowResolution: %d\n", ShadowBufferSize);
+      dlog(" ShadowFilterStrengthBias: %f\n", ShadowFilterStrengthBias);
+      dlog(" ShadowFilterStrengthMinimum: %f\n", ShadowFilterStrengthMinimum);
+      dlog(" ShadowFilterStrengthMaximum: %f\n", ShadowFilterStrengthMaximum);
       dlog(" CommunicationScreenResolution: %d\n\n", CommunicationScreenResolution);
     }
   }
@@ -402,7 +389,7 @@ void Injector_InitHooks()
   }
 
   MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
-  MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[version]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + cBinaryXml__Read_Addr[version]), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
 
   MH_EnableHook(MH_ALL_HOOKS);
 
