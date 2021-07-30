@@ -275,6 +275,7 @@
     <ClInclude Include="MinHook\trampoline.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="SDK.h" />
+    <ClInclude Include="SDKEnums.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
@@ -297,6 +298,7 @@
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Rebug.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>

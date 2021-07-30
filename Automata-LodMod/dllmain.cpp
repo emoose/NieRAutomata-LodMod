@@ -6,13 +6,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.64"
-
-enum GameVersion {
-  Win10 = 0,
-  Win7,
-  UWP
-};
+#define LODMOD_VERSION "0.7"
 
 // Arrays below are [Win10 exe, Win7 exe, UWP/MSStore exe]
 
@@ -26,7 +20,7 @@ const uint32_t GetSaveFolder_Addr[] = { 0x7A5790, 0x79D570, 0x7CB040 };
 const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90 };
 const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990, 0x873DA0 };
 
-const uint32_t var_SettingAddr_AOEnabled[] = { 0x1421F58, 0x1414E48, 0x14A4B08 };
+const uint32_t Setting_AOEnabled_Addr[] = { 0x1421F58, 0x1414E48, 0x14A4B08 };
 
 const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0, 0x79A620 };
 
@@ -74,6 +68,7 @@ float ShadowFilterStrengthBias = 0;
 float ShadowFilterStrengthMinimum = 0;
 float ShadowFilterStrengthMaximum = 0;
 int ShadowBufferSize = 2048; // can be set to 2048+
+bool DisableManualCulling = false;
 int CommunicationScreenResolution = 256;
 
 // Calculated stuff
@@ -179,6 +174,22 @@ void* cBinaryXml__Read_Hook(struct cBinaryXml* thisptr, uint32_t a2, cObject* ou
   return result;
 }
 
+#ifdef _DEBUG
+// Hook per-frame shadow update func so we can capture the current shadow params being used
+
+typedef void* (*ShadowDistanceReader_Fn)(cShadowParam* thisptr, void* a2, void* a3, void* a4);
+ShadowDistanceReader_Fn ShadowDistanceReader_Orig;
+
+cShadowParam* g_curShadowParam = nullptr;
+
+void* ShadowDistanceReader_Hook(cShadowParam* thisptr, void* a2, void* a3, void* a4)
+{
+  if (g_curShadowParam != thisptr)
+    g_curShadowParam = thisptr;
+  return ShadowDistanceReader_Orig(thisptr, a2, a3, a4);
+}
+#endif
+
 typedef void* (*sub_84CD60_Fn)(BehaviorScr* thisptr, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8);
 sub_84CD60_Fn sub_84CD60_Orig;
 void* sub_84CD60_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
@@ -231,13 +242,12 @@ void* sub_84D070_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* 
 typedef uint32_t(*IsAOAllowed_Fn)(void* a1);
 IsAOAllowed_Fn IsAOAllowed_Orig;
 
-uint32_t SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[0];
 uint32_t IsAOAllowed_Hook(void* a1)
 {
   if (!IsAOAllowed_Orig(a1))
     return false;
 
-  auto result = *(uint32_t*)(mBaseAddress + SettingAddr_AOEnabled) != 0;
+  auto result = *(uint32_t*)(mBaseAddress + Setting_AOEnabled_Addr[version]) != 0;
   return result;
 }
 
@@ -250,6 +260,7 @@ void* AO_CreateTextureBuffer_Hook(void* texture, uint32_t width, uint32_t height
   float height_new = (float)height * AOMultiplier;
 
   // This hook is only called 3 times, so lets log it if we can
+
   if (DebugLog)
     dlog("AO_CreateTextureBuffer_Hook(%dx%d) - setting resolution to AOMultiplier (%fx) = %dx%d (will be scaled with game render resolution)\n", width, height, AOMultiplier, (uint32_t)width_new, (uint32_t)height_new);
 
@@ -339,6 +350,7 @@ void Injector_InitHooks()
     ShadowFilterStrengthBias = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthBias", 0);
     ShadowFilterStrengthMinimum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMinimum", 0);
     ShadowFilterStrengthMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMaximum", 0);
+    DisableManualCulling = INI_GetBool(IniPath, L"LodMod", L"DisableManualCulling", false);
     CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", 256, IniPath);
 
     // Old INI keynames...
@@ -376,11 +388,10 @@ void Injector_InitHooks()
       dlog(" ShadowFilterStrengthBias: %f\n", ShadowFilterStrengthBias);
       dlog(" ShadowFilterStrengthMinimum: %f\n", ShadowFilterStrengthMinimum);
       dlog(" ShadowFilterStrengthMaximum: %f\n", ShadowFilterStrengthMaximum);
+      dlog(" DisableManualCulling: %s\n", DisableManualCulling ? "true" : "false");
       dlog(" CommunicationScreenResolution: %d\n\n", CommunicationScreenResolution);
     }
   }
-
-  SettingAddr_AOEnabled = var_SettingAddr_AOEnabled[version];
 
   if (LODMultiplier != 1)
   {
@@ -390,6 +401,13 @@ void Injector_InitHooks()
 
   MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + cBinaryXml__Read_Addr[version]), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
+
+#ifdef _DEBUG
+  MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[version]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
+#endif
+
+  void Rebug_Init();
+  Rebug_Init();
 
   MH_EnableHook(MH_ALL_HOOKS);
 

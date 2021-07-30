@@ -1,8 +1,15 @@
 #pragma once
+#include "SDKEnums.h"
 
 // Most of the stuff in this file is unused (cShadowParam & BehaviorScr are the only structs LodMod actually make use of here)
 // Just felt it was worth documenting the other structs that use the same BinaryXML stuff cShadowParam used :)
 // (these same BinaryXML structs show up in a few PlatinumGames titles - maybe this can help with those too)
+
+enum GameVersion {
+  Win10 = 0,
+  Win7,
+  UWP
+};
 
 #pragma pack(push, 1)
 
