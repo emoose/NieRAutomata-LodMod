@@ -52,10 +52,6 @@ bool CheckFlag(DBGRAPHIC_FLAG flag)
   return (*reinterpret_cast<uint32_t*>(mBaseAddress + address) & rawFlag) != 0;
 }
 
-typedef void* (*fn_2args)(void* a1, void* a2);
-typedef void* (*fn_1args)(void* a1);
-typedef void* (*fn_0args)();
-
 const uint32_t Model_ManualCull_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960 };
 const uint32_t Model_ManualCull_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0 };
 
@@ -123,6 +119,8 @@ void* Model_LodSetup_Hook()
 
   return ret;
 }
+
+
 
 void Rebug_Init()
 {

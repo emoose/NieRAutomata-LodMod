@@ -279,6 +279,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="MapMod.cpp" />
     <ClCompile Include="MinHook\hde\hde32.c">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>

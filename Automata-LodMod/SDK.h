@@ -11,7 +11,39 @@ enum GameVersion {
   UWP
 };
 
+typedef void* (*fn_3args)(void* a1, void* a2, void* a3);
+typedef void* (*fn_2args)(void* a1, void* a2);
+typedef void* (*fn_1args)(void* a1);
+typedef void* (*fn_0args)();
+
 #pragma pack(push, 1)
+
+struct dbFlag
+{
+  char* Name;
+  char* Desc;
+};
+
+struct dbMenu_FlagCategory
+{
+  char* Name;
+#ifdef NA_DEBUG
+  // debug EXE only :(
+  dbFlag* FlagNames;
+#endif
+  uint32_t* FlagPtr;
+  uint64_t NumBits;
+};
+
+struct dbMenu_Flag
+{
+  /* 0x00 */ char* Name;
+  /* 0x08 */ char* Desc; // japanese?
+  /* 0x10 */ uint32_t Category;
+  /* 0x14 */ uint32_t Index;
+  /* 0x18 */ uint32_t LangIndex; // DBG_FLAG_0x{}, DBG_FLAG_HELP_0x{}
+  /* 0x1C */ uint32_t Unk1C;
+};
 
 template<typename T>
 struct cVec4

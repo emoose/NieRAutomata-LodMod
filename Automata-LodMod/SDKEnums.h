@@ -1,8 +1,20 @@
 #pragma once
 
+enum class FLAG_CATEGORY
+{
+  DBG = 0,
+  DBSTP = 1,
+  DBDISP = 2,
+  DBGRAPHIC = 3,
+  STA = 4,
+  STOP = 5,
+  GRAPHIC = 6,
+  DISP = 7,
+  GAME = 8
+};
+
 // enum names come from RTTI inside steam ver
 // value names come from debug ver
-
 enum class DBG_FLAG
 {
   CAMERA_MODE = 0,

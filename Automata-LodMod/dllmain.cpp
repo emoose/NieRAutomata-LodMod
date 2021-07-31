@@ -70,6 +70,7 @@ float ShadowFilterStrengthMaximum = 0;
 int ShadowBufferSize = 2048; // can be set to 2048+
 bool DisableManualCulling = false;
 int CommunicationScreenResolution = 256;
+int NumHQMapSlots = 7;
 
 // Calculated stuff
 int version = 0; // which GameVersion we're injected into
@@ -352,7 +353,7 @@ void Injector_InitHooks()
     ShadowFilterStrengthMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMaximum", 0);
     DisableManualCulling = INI_GetBool(IniPath, L"LodMod", L"DisableManualCulling", false);
     CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", 256, IniPath);
-
+    NumHQMapSlots = GetPrivateProfileIntW(L"LodMod", L"HQMapSlots", 7, IniPath);
     // Old INI keynames...
     if (INI_GetBool(IniPath, L"LodMod", L"DisableLODs", false))
       LODMultiplier = 0;
@@ -369,6 +370,9 @@ void Injector_InitHooks()
 
     // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
     AOMultiplier = fmaxf(fminf(AOMultiplier, 2), 0.1f);
+
+    if (NumHQMapSlots < 7)
+      NumHQMapSlots = 7;
 
     if (DebugLog)
     {
@@ -408,6 +412,9 @@ void Injector_InitHooks()
 
   void Rebug_Init();
   Rebug_Init();
+
+  void MapMod_Init();
+  MapMod_Init();
 
   MH_EnableHook(MH_ALL_HOOKS);
 
