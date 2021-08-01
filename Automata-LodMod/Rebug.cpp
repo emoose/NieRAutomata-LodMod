@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <cstdint>
+#include <string>
+#include <algorithm>
 #include "SDK.h"
 #include "MinHook/MinHook.h"
 
@@ -59,11 +61,12 @@ extern bool DisableManualCulling;
 
 #ifdef _DEBUG
 bool LogModels = false;
-std::vector<char*> CulledModels;
+std::vector<std::string> CulledModels;
+std::vector<std::string> ForcedCulls;
 #endif
 
 fn_2args Model_ManualCull_Orig;
-void* Model_ManualCull_Hook(uint64_t area_id, char* model_name) // area_id might be model_id instead
+void* Model_ManualCull_Hook(uint64_t area_id, char* model_name)
 {
   // NA debug seems to set this value before returning...
   *reinterpret_cast<uint32_t*>(mBaseAddress + Model_ManualCull_ValueAddr[version]) = 1;
@@ -75,27 +78,66 @@ void* Model_ManualCull_Hook(uint64_t area_id, char* model_name) // area_id might
 
   if (DisableManualCulling)
   {
-    // exclude "low"/"lod"/"dummy" models, we want to keep those cullable
-    bool lowModel = 
-      strstr(model_name, "low") != NULL || 
-      strstr(model_name, "lod") != NULL || 
-      strstr(model_name, "dummy") != NULL;
+    std::string lower_name = model_name;
+    std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
+      [](unsigned char c) { return std::tolower(c); });
 
-    if (!lowModel)
-      return 0;
-  }
+    // exclude "low"/"lod"/"dummy" models, we want to keep those cullable
+    bool lowModel =
+      lower_name.find("low") != std::string::npos ||
+      lower_name.find("lod") != std::string::npos ||
+      lower_name.find("dummy") != std::string::npos ||
+      lower_name.find("distant") != std::string::npos ||
+      lower_name.find("far") != std::string::npos ||
+
+      // forest/shopping center LODs near desert entrance
+      (area_id == 0x11316 &&
+        (lower_name == "mall" ||
+         lower_name == "cliff" ||
+         lower_name == "maintree")) ||
+
+      // factory LODs showing near desert start
+      // theres 1 more factory LOD that quickly appears/disappears near desert start above an arch
+      // but its not caused by DisableManualCulling, ugh...
+      (area_id == 0x10921 && lower_name == "mtrobot5") ||
+      (area_id == 0x11021 && lower_name == "mtrobot9") ||
+
+      // misplaced LOD ground near desert housing
+      (area_id == 0x11115 && lower_name == "g11015_ground");
 
 #ifdef _DEBUG
-  if (LogModels)
-  {
-    if (std::find(CulledModels.begin(), CulledModels.end(), model_name) == CulledModels.end())
+    bool clearCulled = false;
+    if (clearCulled)
+      CulledModels.clear();
+
+    if (!lowModel)
     {
-      OutputDebugStringA(model_name);
-      OutputDebugStringA("\n");
-      CulledModels.push_back(model_name);
+      bool forceCullThis = false;
+      if (forceCullThis)
+        ForcedCulls.push_back(lower_name);
+
+      if (std::find(ForcedCulls.cbegin(), ForcedCulls.cend(), lower_name) != ForcedCulls.cend())
+        lowModel = true;
+    }
+#endif
+
+    // Not a low model, return false to disable culling on this
+    if (!lowModel)
+    {
+#ifdef _DEBUG
+      if (LogModels)
+      {
+        if (std::find(CulledModels.begin(), CulledModels.end(), lower_name) == CulledModels.end())
+        {
+          OutputDebugStringA((lower_name + "\n").c_str());
+          CulledModels.push_back(lower_name);
+        }
+      }
+#endif
+      return 0;
     }
   }
-#endif
+
   
   return Model_ManualCull_Orig((void*)area_id, model_name);
 }

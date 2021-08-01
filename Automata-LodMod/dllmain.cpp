@@ -6,7 +6,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.7"
+#define LODMOD_VERSION "0.71"
 
 // Arrays below are [Win10 exe, Win7 exe, UWP/MSStore exe]
 

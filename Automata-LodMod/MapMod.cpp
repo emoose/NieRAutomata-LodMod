@@ -33,7 +33,7 @@ struct cHighMapController
 
 typedef DWORD(*sub_14000F196_Fn)(DWORD, DWORD, DWORD);
 
-#define MAX_LOD_SLOTS 17
+#define MAX_LOD_SLOTS 18
 
 // this LOD slot stuff is a quick hacky job, badly needs to be cleaned up
 cLodSlot* newSlots;
@@ -98,6 +98,8 @@ void InitLodSlots()
     /*  15 */ add_slot(i++, 2, -2, 300, -173.2050781f);
     /*  16 */ add_slot(i++, 2, 2, 300, 519.6152344f);
     /*  17 */ add_slot(i++, -2, -2, -346.4101562f, -346.4101562f);
+    /*  18 */ add_slot(i++, 1, -2, 150.f, -259.8076172f);
+    /*  19 */ add_slot(i++, -1, -2, -150.f, -433.01268763f);
   }
 
   // TODO:
@@ -272,6 +274,9 @@ void MapMod_Init()
   NumHQMapSlots = MAX_LOD_SLOTS;
 #endif
 
+  if (NumHQMapSlots == 7)
+    return; // nothing to change;
+
   uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xD0 };
   uint8_t setRcx[] = { 0x48, 0xB9, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x90 };
 
@@ -329,6 +334,9 @@ void MapMod_Init()
   uint32_t BufferRedirect2Size = 0x7;
   // Redirect to NewSlots+0x30
   SafeWrite(mBaseAddress + 0x7C7410 + 3, ((NewSlotsAddr + 0x30) - (BufferRedirect2Addr + BufferRedirect2Size)));
+
+  // Disable LowMapController
+  //SafeWrite(mBaseAddress + 0x7C74C2 + 1, (uint32_t)1);
 
   // Hook cHighMapController::Update func to use our reimplementation instead
   // (reimplemented ver allows variable number of slots, and can read from NewSlots instead)
