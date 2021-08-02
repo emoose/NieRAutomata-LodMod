@@ -4,6 +4,8 @@
 #include <cstdint>
 #include "SDK.h"
 #include "MinHook/MinHook.h"
+#include <string>
+#include <sstream>
 
 extern uintptr_t mBaseAddress;
 extern int version;
@@ -81,7 +83,7 @@ struct cHighMapController
 
 #pragma pack(pop)
 
-#define MAX_LOD_SLOTS 15
+#define MAX_LOD_SLOTS 19
 
 // Game stores areas in a flat hexagonal grid using axial coordinates
 // https://www.redblobgames.com/grids/hexagons/#conversions-axial for more info
@@ -113,11 +115,25 @@ cLodSlot LodInfo[22] =
   // Seems to be another limit for 14 slots in the LowMapController stuff & other related crap, wew
   // If enabled these will break something and cause low-LOD to be stuck loaded with no way to load the HQ ver...
 
-  // /* 15 */ {{1,1,0,0},   {150,0,259.807617f,0}},
-  // /* 16 */ {{2,0,0,0},   {300,0,173.205078f,0}},
-  // /* 17 */ {{2,-1,0,0},  {300,0,0,0}},
-  // /* 18 */ {{2,-2,0,0},  {300,0,-173.205078f,0}},
+  /* 15 */ {{1,1,0,0},   {150,0,259.807617f,0}},
+  /* 16 */ {{2,0,0,0},   {300,0,173.205078f,0}},
+  /* 17 */ {{2,-1,0,0},  {300,0,0,0}},
+  /* 18 */ {{2,-2,0,0},  {300,0,-173.205078f,0}},
 };
+
+std::string BuildReport(cHighMapController* ctl)
+{
+  std::stringstream ss;
+  for (int i = 0; i < NumHQMapSlots; i++)
+  {
+    auto& mapData = ctl->map_sections[i];
+
+    ss << i << ": " << (int)mapData.LoadState << " (" << std::hex << mapData.CurrentAreaId << ":" << mapData.DesiredAreaId << std::dec << ")";
+    ss << " - " << mapData.Position.value[0] << " " << mapData.Position.value[1] << " " << mapData.Position.value[2] << " " << mapData.Position.value[3];
+    ss << "\r\n";
+  }
+  return ss.str();
+}
 
 uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2, BYTE* a3)
 {
@@ -155,6 +171,13 @@ uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2
   v6 = 0;
   v7 = 0i64;
   std::memset(v32, 0xFF, MAX_LOD_SLOTS * sizeof(DWORD));
+
+#ifdef _DEBUG
+  auto report = BuildReport(a1);
+  int playerArea = GetAreaIdForCoords(v5, v3, 1);
+  playerArea = playerArea;
+#endif
+
   do
   {
     v34[v6].AreaId = GetAreaIdForCoords(
@@ -271,14 +294,19 @@ uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2
     ++v23;
   } while (v23 < NumHQMapSlots);
 
+#ifdef _DEBUG
+  auto report2 = BuildReport(a1);
+  report = report;
+#endif
+
   return result;
 }
 
 uint32_t PrevNumLods = 7;
 
-typedef void* (*MemorySystem__CreateRootHeap_Fn)(void* destHeap, uint64_t heapSize, uint32_t a3, char* heapName);
+typedef void* (*MemorySystem__CreateRootHeap_Fn)(void* destHeap, uint64_t heapSize, void* a3, char* heapName);
 MemorySystem__CreateRootHeap_Fn MemorySystem__CreateRootHeap_Orig;
-void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, uint32_t a3, char* heapName)
+void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, void* a3, char* heapName)
 {
   if (!strcmp(heapName, "TEXTURE ROOT"))
   {
@@ -298,6 +326,30 @@ void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, uint3
   }
 
   return MemorySystem__CreateRootHeap_Orig(destHeap, heapSize, a3, heapName);
+}
+
+void LoadListSetup_Hook(BYTE* a1)
+{
+  for (int i = 0; i < (0xE * 2); i++)
+  {
+    if (*(DWORD*)(a1 + (i*0xC)) != 0xFFFFFFFF)
+    {
+      if (*(DWORD*)(a1 + (i * 0xC) + 8) || !*(DWORD*)(a1 + (0xA8 * 2)))
+      {
+        auto v2 = *(float*)(a1 + (i * 0xC) + 4) - 0.05f;
+        *(float*)(a1 + (i * 0xC) + 4) = v2;
+        if (v2 <= 0.0)
+          *(DWORD*)(a1 + (i * 0xC)) = 0xFFFFFFFF;
+      }
+      else
+      {
+        auto v1 = *(float*)(a1 + (i * 0xC) + 4) + 0.05f;
+        *(float*)(a1 + (i * 0xC) + 4) = v1;
+        if (v1 >= 1.0)
+          *(float*)(a1 + (i * 0xC) + 4) = 1.f;
+      }
+    }
+  }
 }
 
 void MapMod_Init()
@@ -329,6 +381,29 @@ void MapMod_Init()
   // Set cHighMapController constructor to use our LOD slot count
   SafeWrite(mBaseAddress + 0x7C72C7 + 2, (uint8_t)NumHQMapSlots);
 
+  // Update load-list ptr to block of unused space
+  SafeWrite(mBaseAddress + 0x108734 + 3, (uint32_t)(0x114d005 + 0x5566C0));
+  SafeWrite(mBaseAddress + 0x7C2DF4 + 3, (uint32_t)(0xa92945 + 0x5566C0));
+  SafeWrite(mBaseAddress + 0x7C4A61 + 3, (uint32_t)(0xa90cd8 + 0x5566C0));
+  SafeWrite(mBaseAddress + 0x7C8141 + 3, (uint32_t)(0xa8d5f8 + 0x5566C0));
+  SafeWrite(mBaseAddress + 0x7C8548 + 3, (uint32_t)(0xa8d1f1 + 0x5566C0));
+  SafeWrite(mBaseAddress + 0x7C85E8 + 3, (uint32_t)(0xa8d151 + 0x5566C0));
+  SafeWrite(mBaseAddress + 0x7C86DB + 3, (uint32_t)(0xa8d05e + 0x5566C0));
+
+  SafeWrite(mBaseAddress + 0x7C4A6C + 3, (uint32_t)(0xa90d75 + 0x5566C0 + (0xA8*2)));
+
+  // Update load-list init func to write double entry count
+  SafeWrite(mBaseAddress + 0x7D2ACA + 2, (uint8_t)(0xE * 2));
+  SafeWrite(mBaseAddress + 0x8224DA + 2, (uint8_t)(0xE * 2));
+  SafeWrite(mBaseAddress + 0x7D2AD3 + 3, (uint32_t)(0xA8 * 2));
+  SafeWrite(mBaseAddress + 0x8224E3 + 2, (uint32_t)(0xA8 * 2));
+
+  // Patch load-list count checks
+  SafeWrite(mBaseAddress + 0x8317BB + 3, (uint8_t)(0xE * 2));
+  SafeWrite(mBaseAddress + 0x8361CC + 3, (uint8_t)(0xE * 2));
+  SafeWrite(mBaseAddress + 0x83182F + 3, (uint8_t)(0xE * 2));
+
+  MH_CreateHook((LPVOID)(mBaseAddress + 0x830D40), LoadListSetup_Hook, NULL);
   // Uncomment this to let game set up the LOD slot coordinates
   // It does this incorrectly for the distance = 2 slots though ;_;
   //SafeWrite(mBaseAddress + 0x7C743E + 2, (uint8_t)(NUM_SLOTS_TO_UPDATE - 1));
@@ -336,6 +411,7 @@ void MapMod_Init()
   // Disable LowMapController
   //SafeWrite(mBaseAddress + 0x7C74C2 + 1, (uint32_t)1);
   //SafeWrite(mBaseAddress + 0x815C61 + 3, (uint8_t)0x10); // alternate
+  //SafeWrite(mBaseAddress + 0x815D20 + 3, (uint8_t)0x10); // alternate
 
   // Hook cHighMapController::Update func to use our reimplementation instead
   // (reimplemented ver allows variable number of slots, and can read from NewSlots instead)
