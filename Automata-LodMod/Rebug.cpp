@@ -6,6 +6,8 @@
 #include <algorithm>
 #include "SDK.h"
 #include "MinHook/MinHook.h"
+#include <mutex>
+#include <thread>
 
 // Rebug: hooks to add some debug-flag checks back into functions, based on NA debug exe
 
@@ -62,7 +64,11 @@ extern bool DisableManualCulling;
 #ifdef _DEBUG
 bool LogModels = false;
 std::vector<std::string> CulledModels;
+std::mutex CulledModelsMutex;
 std::vector<std::string> ForcedCulls;
+std::mutex ForcedCullsMutex;
+
+char ModelsToSkip[16384] = { 0 };
 #endif
 
 fn_2args Model_ManualCull_Orig;
@@ -99,19 +105,27 @@ void* Model_ManualCull_Hook(uint64_t area_id, char* model_name)
       // factory LODs showing near desert start
       // theres 1 more factory LOD that quickly appears/disappears near desert start above an arch
       // but its not caused by DisableManualCulling, ugh...
-      (area_id == 0x10921 && lower_name == "mtrobot5") ||
-      (area_id == 0x11021 && lower_name == "mtrobot9") ||
+      (area_id == 0x10921 && lower_name.find("mtrobot5") != std::string::npos) ||
+      (area_id == 0x11021 && lower_name.find("mtrobot9") != std::string::npos) || // catches mtrobot9 & mtrobot9_1
 
       // misplaced LOD ground near desert housing
-      (area_id == 0x11115 && lower_name == "g11015_ground");
+      (area_id == 0x11115 && lower_name == "g11015_ground") ||
+
+      // LOD near forest waterfalls
+      (area_id == 0x11214 && lower_name == "buildddddddddddd");
 
 #ifdef _DEBUG
+    if (!lowModel && strstr(ModelsToSkip, lower_name.c_str()))
+      lowModel = true;
+
     bool clearCulled = false;
     if (clearCulled)
       CulledModels.clear();
 
     if (!lowModel)
     {
+      std::lock_guard<std::mutex> lock(ForcedCullsMutex);
+
       bool forceCullThis = false;
       if (forceCullThis)
         ForcedCulls.push_back(lower_name);
@@ -127,6 +141,7 @@ void* Model_ManualCull_Hook(uint64_t area_id, char* model_name)
 #ifdef _DEBUG
       if (LogModels)
       {
+        std::lock_guard<std::mutex> lock(ForcedCullsMutex);
         if (std::find(CulledModels.begin(), CulledModels.end(), lower_name) == CulledModels.end())
         {
           OutputDebugStringA((lower_name + "\n").c_str());
