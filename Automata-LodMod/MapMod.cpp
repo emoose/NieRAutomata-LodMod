@@ -81,14 +81,17 @@ struct cHighMapController
 
 #pragma pack(pop)
 
-#define MAX_LOD_SLOTS 17
+#define MAX_LOD_SLOTS 15
 
+// Game stores areas in a flat hexagonal grid using axial coordinates
+// https://www.redblobgames.com/grids/hexagons/#conversions-axial for more info
 cLodSlot LodInfo[22] =
 {
   // Delta coordinates & positions for those coords
   // Calculated by game at 0x7C7433, that only affects the old cLodSlots with max count of 7 though
   // Just copied the results after running that code into here
   /*  0 */ {{0,0,0,0}, {0,0,0,1}},
+
   /*  1 */ {{0,-1,0,0}, {0,0,-173.205078f,0}},
   /*  2 */ {{-1,0,0,0}, {-150,0,-86.602539f,0}},
   /*  3 */ {{-1,1,0,0}, {-150,0,86.602539f,0}},
@@ -98,21 +101,22 @@ cLodSlot LodInfo[22] =
 
   // New slots
   // Games position-calculation func doesn't work properly for distance = 2, so had to find these manually...
-  /*  7 */ {{-1,-1,0,0}, {-150,0,-259.807617f,0}},
-  /*  8 */ {{1,1,0,0},   {150,0,259.807617f,0}},
-  /*  9 */ {{0,-2,0,0},  {0,0,-346.410156f,0}},
-  /* 10 */ {{0,2,0,0},   {0,0,346.410156f,0}},
-  /* 11 */ {{-2,0,0,0},  {-300,0,-173.205078f,0}},
-  /* 12 */ {{2,0,0,0},   {300,0,173.205078f,0}},
-  /* 13 */ {{-2,2,0,0},  {-300,0,173.205078f,0}},
-  /* 14 */ {{2,-2,0,0},  {300,0,-173.205078f,0}},
-  /* 15 */ {{2,2,0,0},   {300,0,519.615234f,0}},
-  /* 16 */ {{-2,-2,0,0}, {-300,0,-519.615234f,0}},
+  /*  7 */ {{1,-2,0,0}, {150,0,-259.807617f,0}},
+  /*  8 */ {{0,-2,0,0},  {0,0,-346.410156f,0}},
+  /*  9 */ {{-1,-1,0,0}, {-150,0,-259.807617f,0}},
+  /* 10 */ {{-2,0,0,0},  {-300,0,-173.205078f,0}},
+  /* 11 */ {{-2,1,0,0},  {-300,0,0,0}},
+  /* 12 */ {{-2,2,0,0},  {-300,0,173.205078f,0}},
+  /* 13 */ {{-1,2,0,0},  {-150,0,259.807617f,0}},
+  /* 14 */ {{0,2,0,0},   {0,0,346.410156f,0}},
 
-  // Needs CreateChildHeap hook so we can extend shit...
-  // 
-  // /* 17 */ {{1,-2,0,0}, {150,0,-259.8076172f,0}},
- // /* 18 */ {{-1,-2,0,0}, {-150,0,-433.01268763f,0}},
+  // Seems to be another limit for 14 slots in the LowMapController stuff & other related crap, wew
+  // If enabled these will break something and cause low-LOD to be stuck loaded with no way to load the HQ ver...
+
+  // /* 15 */ {{1,1,0,0},   {150,0,259.807617f,0}},
+  // /* 16 */ {{2,0,0,0},   {300,0,173.205078f,0}},
+  // /* 17 */ {{2,-1,0,0},  {300,0,0,0}},
+  // /* 18 */ {{2,-2,0,0},  {300,0,-173.205078f,0}},
 };
 
 uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2, BYTE* a3)

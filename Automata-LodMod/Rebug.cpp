@@ -99,8 +99,8 @@ void* Model_ManualCull_Hook(uint64_t area_id, char* model_name)
       // forest/shopping center LODs near desert entrance
       (area_id == 0x11316 &&
         (lower_name == "mall" ||
-         lower_name == "cliff" ||
-         lower_name == "maintree")) ||
+          lower_name == "cliff" ||
+          lower_name == "maintree")) ||
 
       // factory LODs showing near desert start
       // theres 1 more factory LOD that quickly appears/disappears near desert start above an arch
@@ -112,7 +112,10 @@ void* Model_ManualCull_Hook(uint64_t area_id, char* model_name)
       (area_id == 0x11115 && lower_name == "g11015_ground") ||
 
       // LOD near forest waterfalls
-      (area_id == 0x11214 && lower_name == "buildddddddddddd");
+      (area_id == 0x11214 && lower_name == "buildddddddddddd") ||
+
+      // misplaced LOD ground intersecting desert oasis ground
+      (area_id == 0x10318 && lower_name == "g10218_ground");
 
 #ifdef _DEBUG
     if (!lowModel && strstr(ModelsToSkip, lower_name.c_str()))
