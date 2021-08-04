@@ -185,6 +185,8 @@ static_assert(sizeof(cLightApplyScale) == 0x20); // should be correct size
 class cLightSaveWork : public cObject
 {
 public:
+  cObject_Data* GetData() { return 0; }
+
   /* 0x008 */ uint32_t m_flag; // 2
   /* 0x00C */ float m_priority; // 6 - could be int32_t
 
@@ -303,15 +305,16 @@ public:
 
   /* 0x4D0 */ cVec4<float> m_EnlDummyCubeColor; // B
 
-  /* 0x4E0 */ float m_RoomLightWork[0x40]; // F, probably a struct but no idea what
+  /* 0x4E0 */ cLightSaveWork m_RoomLightWork[0x40]; // F
+
+  /* 0x30E0 */ uint8_t unk30E0[0x20];
 };
-static_assert(sizeof(cLightDataMinimum) == 0x5E0); // not the actual size, but what the above seems to add up to
-//static_assert(sizeof(cLightDataMinimum) == 0x3100); // size from the EXE, doesn't look correct tho...
+static_assert(sizeof(cLightDataMinimum) == 0x3100); // size from the EXE
 
 class cLightDataMinimumEv : public cLightDataMinimum
 {
 };
-static_assert(sizeof(cLightDataMinimumEv) == 0x5E0); // not the actual size, but what the above seems to add up to
+static_assert(sizeof(cLightDataMinimumEv) == 0x3100); // size from the EXE
 
 class cDofWork : public cObject
 {

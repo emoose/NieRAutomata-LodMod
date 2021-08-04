@@ -124,13 +124,23 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
       (area_id == 0x1214 && lower_name == "buildddddddddddd") ||
 
       // misplaced LOD ground intersecting desert oasis ground
-      (area_id == 0x0318 && lower_name == "g10218_ground");
+      (area_id == 0x0318 && lower_name == "g10218_ground") ||
+
+      // mountain LODs from amusement park showing near forest castle
+      // (sadly there's a wall that pops in/out near forest castle which ruins the view of amusement park... hope it can be fixed eventually, with the wall there it looks great)
+      (area_id == 0x1616 && lower_name == "g11616_enkei_mountain") ||
+      (area_id == 0x1816 && lower_name == "g11816_mountain");
 
     if (lowModel)
     {
       // "nolow" is used for things they want culled from LQ, force enable them
       if (lower_name.find("nolow") != std::string::npos)
-        lowModel = false;
+        // except amusement park has "nolowmap_far_01" which is an ugly lod near save point
+        // (park also has a weird pop-in issue near where the goliath tank is, the connecting bit 
+        // between save-point & that area has some kind of trigger which swaps model sets, 
+        // haven't found a way to change that yet)
+        if (lower_name.find("far") == std::string::npos)
+          lowModel = false;
     }
 
 #ifdef _DEBUG
