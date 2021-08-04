@@ -74,7 +74,7 @@ char ModelsToSkip[16384] = { 0 };
 extern bool g11420IsLoaded;
 
 fn_2args Model_ShouldBeCulled_Orig;
-bool Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
+void* Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
 {
   // NA debug seems to set this value before returning...
   *reinterpret_cast<uint32_t*>(mBaseAddress + Model_ShouldBeCulled_ValueAddr[version]) = 1;
@@ -82,11 +82,11 @@ bool Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
   // Reimplement DBG_MANUAL_CULLING_DISABLE
   // TODO: there's another check for this in NA debug (0x9A42BD), might be worth reimplementing (at ~0x827C77)
   if (CheckFlag(DBG_FLAG::DBG_MANUAL_CULLING_DISABLE))
-    return false;
+    return (void*)0;
 
   // 31319 has an ugly dummy LOD for the resistance camp building, kill it if resistance camp is loaded
   if (area_id == 0x31319 && !strcmp(model_name, "g11420_dummybuild") && g11420IsLoaded)
-    return true;
+    return (void*)1;
 
   if (DisableManualCulling)
   {
@@ -123,6 +123,13 @@ bool Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
       // misplaced LOD ground intersecting desert oasis ground
       (area_id == 0x10318 && lower_name == "g10218_ground");
 
+    if (lowModel)
+    {
+      // "nolow" is used for things they want culled from LQ, force enable them
+      if (lower_name.find("nolow") != std::string::npos)
+        lowModel = false;
+    }
+
 #ifdef _DEBUG
     if (!lowModel && strstr(ModelsToSkip, lower_name.c_str()))
       lowModel = true;
@@ -151,18 +158,17 @@ bool Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
       if (LogModels)
       {
         std::lock_guard<std::mutex> lock(ForcedCullsMutex);
-        if (std::find(CulledModels.begin(), CulledModels.end(), lower_name) == CulledModels.end())
+        if (std::find(CulledModels.cbegin(), CulledModels.cend(), lower_name) == CulledModels.cend())
         {
           OutputDebugStringA((lower_name + "\n").c_str());
           CulledModels.push_back(lower_name);
         }
       }
 #endif
-      return 0;
+      return (void*)0;
     }
   }
 
-  
   return Model_ShouldBeCulled_Orig((void*)area_id, model_name);
 }
 
