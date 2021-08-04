@@ -56,8 +56,8 @@ bool CheckFlag(DBGRAPHIC_FLAG flag)
   return (*reinterpret_cast<uint32_t*>(mBaseAddress + address) & rawFlag) != 0;
 }
 
-const uint32_t Model_ManualCull_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960 };
-const uint32_t Model_ManualCull_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0 };
+const uint32_t Model_ShouldBeCulled_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960 };
+const uint32_t Model_ShouldBeCulled_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0 };
 
 extern bool DisableManualCulling;
 
@@ -71,16 +71,22 @@ std::mutex ForcedCullsMutex;
 char ModelsToSkip[16384] = { 0 };
 #endif
 
-fn_2args Model_ManualCull_Orig;
-void* Model_ManualCull_Hook(uint64_t area_id, char* model_name)
+extern bool g11420IsLoaded;
+
+fn_2args Model_ShouldBeCulled_Orig;
+bool Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
 {
   // NA debug seems to set this value before returning...
-  *reinterpret_cast<uint32_t*>(mBaseAddress + Model_ManualCull_ValueAddr[version]) = 1;
+  *reinterpret_cast<uint32_t*>(mBaseAddress + Model_ShouldBeCulled_ValueAddr[version]) = 1;
 
   // Reimplement DBG_MANUAL_CULLING_DISABLE
   // TODO: there's another check for this in NA debug (0x9A42BD), might be worth reimplementing (at ~0x827C77)
   if (CheckFlag(DBG_FLAG::DBG_MANUAL_CULLING_DISABLE))
-    return 0;
+    return false;
+
+  // 31319 has an ugly dummy LOD for the resistance camp building, kill it if resistance camp is loaded
+  if (area_id == 0x31319 && !strcmp(model_name, "g11420_dummybuild") && g11420IsLoaded)
+    return true;
 
   if (DisableManualCulling)
   {
@@ -157,7 +163,7 @@ void* Model_ManualCull_Hook(uint64_t area_id, char* model_name)
   }
 
   
-  return Model_ManualCull_Orig((void*)area_id, model_name);
+  return Model_ShouldBeCulled_Orig((void*)area_id, model_name);
 }
 
 const uint32_t Model_LodSetup_Addr[] = { 0x846260, 0x83DBB0, 0x86CF90 };
@@ -180,10 +186,8 @@ void* Model_LodSetup_Hook()
   return ret;
 }
 
-
-
 void Rebug_Init()
 {
-  MH_CreateHook((LPVOID)(mBaseAddress + Model_ManualCull_Addr[version]), Model_ManualCull_Hook, (LPVOID*)&Model_ManualCull_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + Model_ShouldBeCulled_Addr[version]), Model_ShouldBeCulled_Hook, (LPVOID*)&Model_ShouldBeCulled_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + Model_LodSetup_Addr[version]), Model_LodSetup_Hook, (LPVOID*)&Model_LodSetup_Orig);
 }

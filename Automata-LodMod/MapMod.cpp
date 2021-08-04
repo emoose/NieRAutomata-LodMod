@@ -135,42 +135,42 @@ std::string BuildReport(cHighMapController* ctl)
   return ss.str();
 }
 
+bool g11420IsLoaded = false;
+
 uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2, BYTE* a3)
 {
   int v3; // edx
   int v5; // ecx
   int v6; // ebx
-  __int64 v7; // rdi
   int v12; // ecx
   int v13; // ecx
-  DWORD* v14; // r8
+  int* v14; // r8
   int v15; // er10
-  __int64 v16; // rbx
+  int v16; // rbx
   int v17; // er11
   int v18; // eax
-  __int64 v19; // r9
+  int v19; // r9
   int v20; // rcx
-  DWORD* v21; // r15
+  int* v21; // r15
   cMapSlot* v22; // r14
-  __int64 v23; // r12
+  int v23; // r12
   uint64_t result; // rax
-  DWORD v25; // edx
+  int v25; // edx
   int v27; // ebp
-  __int64 v28; // rdi
-  DWORD v32[MAX_LOD_SLOTS]; // [rsp+30h] [rbp-188h] ext this
-  DWORD v33[MAX_LOD_SLOTS * 2]; // [rsp+50h] [rbp-168h]
+  int v28; // rdi
+  int v32[MAX_LOD_SLOTS]; // [rsp+30h] [rbp-188h] ext this
+  int v33[MAX_LOD_SLOTS * 2]; // [rsp+50h] [rbp-168h]
   cMapSlot v34[MAX_LOD_SLOTS]; // [rsp+90h] [rbp-128h] ext this
 
-  typedef int(*sub_14000F196_Fn)(DWORD, DWORD, DWORD);
-  sub_14000F196_Fn GetAreaIdForCoords = (sub_14000F196_Fn)(mBaseAddress + 0x7C2E60);
+  typedef int(*GetAreaIdForCoords_Fn)(int, int, int);
+  GetAreaIdForCoords_Fn GetAreaIdForCoords = (GetAreaIdForCoords_Fn)(mBaseAddress + 0x7C2E60);
   fn_3args AddVects = (fn_3args)(mBaseAddress + 0x265F00);
   fn_2args CopyVect4 = (fn_2args)(mBaseAddress + 0x263E80);
 
-  v3 = *(DWORD*)(a3 + 20);
-  v5 = *(DWORD*)(a3 + 16);
+  v3 = *(int*)(a3 + 20);
+  v5 = *(int*)(a3 + 16);
   v6 = 0;
-  v7 = 0i64;
-  std::memset(v32, 0xFF, MAX_LOD_SLOTS * sizeof(DWORD));
+  std::memset(v32, 0xFF, MAX_LOD_SLOTS * sizeof(int));
 
 #ifdef _DEBUG
   auto report = BuildReport(a1);
@@ -178,12 +178,17 @@ uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2
   playerArea = playerArea;
 #endif
 
+  g11420IsLoaded = false;
+
   do
   {
     v34[v6].AreaId = GetAreaIdForCoords(
       LodInfo[v6].coords.value[0] + v5,
       LodInfo[v6].coords.value[1] + v3,
-      1i64);
+      1);
+
+    if (v34[v6].AreaId == 0x11420)
+      g11420IsLoaded = true;
 
     AddVects(&v34[v6], a3, &LodInfo[v6].position);
 
@@ -204,19 +209,18 @@ uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2
     v33[(v6 * 2) + 1] = v13;
 
     ++v6;
-    v7 += 0x50i64;
   } while (v6 < NumHQMapSlots);
 
   v14 = &v33[1];
   v15 = 0;
-  v16 = 0i64;
+  v16 = 0;
   do
   {
     v17 = *(v14 - 1);
     if (v17 != -1 || *v14 != -1)
     {
       v18 = 0;
-      v19 = 0i64;
+      v19 = 0;
       do
       {
         v20 = v34[v18].AreaId;
@@ -245,14 +249,14 @@ uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2
 
   v21 = v32;
   v22 = v34;
-  v23 = 0i64;
+  v23 = 0;
   do
   {
     result = *v21;
     if ((int)result == -1)
     {
       v27 = 0;
-      v28 = 0i64;
+      v28 = 0;
       while (v33[2 * v28] != -1 && v33[2 * v28 + 1] != -1 || !a1->unk14 || v28 < 0 || v27 >= (signed int)a1->max_count)
       {
         ++v28;
@@ -330,11 +334,11 @@ void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, void*
 
 void LoadListSetup_Hook(BYTE* a1)
 {
-  for (int i = 0; i < (0xE * 2); i++)
+  for (int i = 0; i < (MAX_LOD_SLOTS * 2); i++)
   {
     if (*(DWORD*)(a1 + (i*0xC)) != 0xFFFFFFFF)
     {
-      if (*(DWORD*)(a1 + (i * 0xC) + 8) || !*(DWORD*)(a1 + (0xA8 * 2)))
+      if (*(DWORD*)(a1 + (i * 0xC) + 8) || !*(DWORD*)(a1 + ((MAX_LOD_SLOTS * 2) * 0xC)))
       {
         auto v2 = *(float*)(a1 + (i * 0xC) + 4) - 0.05f;
         *(float*)(a1 + (i * 0xC) + 4) = v2;
@@ -390,18 +394,21 @@ void MapMod_Init()
   SafeWrite(mBaseAddress + 0x7C85E8 + 3, (uint32_t)(0xa8d151 + 0x5566C0));
   SafeWrite(mBaseAddress + 0x7C86DB + 3, (uint32_t)(0xa8d05e + 0x5566C0));
 
-  SafeWrite(mBaseAddress + 0x7C4A6C + 3, (uint32_t)(0xa90d75 + 0x5566C0 + (0xA8*2)));
+  // Some code writes to an int at end of load-list, update addr/pointers of it
+  uint32_t loadSlotCount = (MAX_LOD_SLOTS * 2);
+  uint32_t loadSlotSize = loadSlotCount * 0xC;
+  SafeWrite(mBaseAddress + 0x7C4A6C + 3, (uint32_t)(0xa90d75 + 0x5566C0 + loadSlotSize));
+  SafeWrite(mBaseAddress + 0x7D2AD3 + 3, loadSlotSize);
+  SafeWrite(mBaseAddress + 0x8224E3 + 2, loadSlotSize);
 
   // Update load-list init func to write double entry count
-  SafeWrite(mBaseAddress + 0x7D2ACA + 2, (uint8_t)(0xE * 2));
-  SafeWrite(mBaseAddress + 0x8224DA + 2, (uint8_t)(0xE * 2));
-  SafeWrite(mBaseAddress + 0x7D2AD3 + 3, (uint32_t)(0xA8 * 2));
-  SafeWrite(mBaseAddress + 0x8224E3 + 2, (uint32_t)(0xA8 * 2));
+  SafeWrite(mBaseAddress + 0x7D2ACA + 2, (uint8_t)(loadSlotCount));
+  SafeWrite(mBaseAddress + 0x8224DA + 2, (uint8_t)(loadSlotCount));
 
   // Patch load-list count checks
-  SafeWrite(mBaseAddress + 0x8317BB + 3, (uint8_t)(0xE * 2));
-  SafeWrite(mBaseAddress + 0x8361CC + 3, (uint8_t)(0xE * 2));
-  SafeWrite(mBaseAddress + 0x83182F + 3, (uint8_t)(0xE * 2));
+  SafeWrite(mBaseAddress + 0x8317BB + 3, (uint8_t)(loadSlotCount));
+  SafeWrite(mBaseAddress + 0x8361CC + 3, (uint8_t)(loadSlotCount));
+  SafeWrite(mBaseAddress + 0x83182F + 3, (uint8_t)(loadSlotCount));
 
   MH_CreateHook((LPVOID)(mBaseAddress + 0x830D40), LoadListSetup_Hook, NULL);
   // Uncomment this to let game set up the LOD slot coordinates
