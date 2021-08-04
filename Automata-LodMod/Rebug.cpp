@@ -74,7 +74,7 @@ char ModelsToSkip[16384] = { 0 };
 extern bool g11420IsLoaded;
 
 fn_2args Model_ShouldBeCulled_Orig;
-void* Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
+void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
 {
   // NA debug seems to set this value before returning...
   *reinterpret_cast<uint32_t*>(mBaseAddress + Model_ShouldBeCulled_ValueAddr[version]) = 1;
@@ -84,8 +84,11 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
   if (CheckFlag(DBG_FLAG::DBG_MANUAL_CULLING_DISABLE))
     return (void*)0;
 
-  // 31319 has an ugly dummy LOD for the resistance camp building, kill it if resistance camp is loaded
-  if (area_id == 0x31319 && !strcmp(model_name, "g11420_dummybuild") && g11420IsLoaded)
+  // remove game-stage (beginning/middle/end) from area id
+  int area_id = area_id_full & 0xFFFF;
+
+  // x1319 has an ugly dummy LOD for the resistance camp building, kill it if resistance camp is loaded
+  if (area_id == 0x1319 && !strcmp(model_name, "g11420_dummybuild") && g11420IsLoaded)
     return (void*)1;
 
   if (DisableManualCulling)
@@ -103,7 +106,7 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
       lower_name.find("far") != std::string::npos ||
 
       // forest/shopping center LODs near desert entrance
-      (area_id == 0x11316 &&
+      (area_id == 0x1316 &&
         (lower_name == "mall" ||
           lower_name == "cliff" ||
           lower_name == "maintree")) ||
@@ -111,17 +114,17 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
       // factory LODs showing near desert start
       // theres 1 more factory LOD that quickly appears/disappears near desert start above an arch
       // but its not caused by DisableManualCulling, ugh...
-      (area_id == 0x10921 && lower_name.find("mtrobot5") != std::string::npos) ||
-      (area_id == 0x11021 && lower_name.find("mtrobot9") != std::string::npos) || // catches mtrobot9 & mtrobot9_1
+      (area_id == 0x0921 && lower_name.find("mtrobot5") != std::string::npos) ||
+      (area_id == 0x1021 && lower_name.find("mtrobot9") != std::string::npos) || // catches mtrobot9 & mtrobot9_1
 
       // misplaced LOD ground near desert housing
-      (area_id == 0x11115 && lower_name == "g11015_ground") ||
+      (area_id == 0x1115 && lower_name == "g11015_ground") ||
 
       // LOD near forest waterfalls
-      (area_id == 0x11214 && lower_name == "buildddddddddddd") ||
+      (area_id == 0x1214 && lower_name == "buildddddddddddd") ||
 
       // misplaced LOD ground intersecting desert oasis ground
-      (area_id == 0x10318 && lower_name == "g10218_ground");
+      (area_id == 0x0318 && lower_name == "g10218_ground");
 
     if (lowModel)
     {
@@ -169,7 +172,7 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id, char* model_name)
     }
   }
 
-  return Model_ShouldBeCulled_Orig((void*)area_id, model_name);
+  return Model_ShouldBeCulled_Orig((void*)area_id_full, model_name);
 }
 
 const uint32_t Model_LodSetup_Addr[] = { 0x846260, 0x83DBB0, 0x86CF90 };

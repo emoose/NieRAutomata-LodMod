@@ -187,7 +187,7 @@ uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2
       LodInfo[v6].coords.value[1] + v3,
       1);
 
-    if (v34[v6].AreaId == 0x11420)
+    if ((v34[v6].AreaId & 0xFFFF) == 0x1420)
       g11420IsLoaded = true;
 
     AddVects(&v34[v6], a3, &LodInfo[v6].position);
