@@ -73,10 +73,10 @@ struct cHighMapController
 {
   BYTE* vfTable;
   cMapSection* map_sections;
-  DWORD max_count;
-  DWORD unk14;
-  DWORD unk18;
-  DWORD unk1C;
+  int max_count;
+  int is_active;
+  int unk18;
+  int unk1C;
   BYTE unk20[96];
   //cLodSlot slots[7];
 };
@@ -137,173 +137,137 @@ std::string BuildReport(cHighMapController* ctl)
 
 bool g11420IsLoaded = false;
 
-uint64_t __fastcall cHighMapController_Update(cHighMapController* a1, __int64 a2, BYTE* a3)
+void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BYTE* a3)
 {
-  int v3; // edx
-  int v5; // ecx
-  int v6; // ebx
-  int v12; // ecx
-  int v13; // ecx
-  int* v14; // r8
-  int v15; // er10
-  int v16; // rbx
-  int v17; // er11
-  int v18; // eax
-  int v19; // r9
-  int v20; // rcx
-  int* v21; // r15
-  cMapSlot* v22; // r14
-  int v23; // r12
-  uint64_t result; // rax
-  int v25; // edx
-  int v27; // ebp
-  int v28; // rdi
-  int v32[MAX_LOD_SLOTS]; // [rsp+30h] [rbp-188h] ext this
-  int v33[MAX_LOD_SLOTS * 2]; // [rsp+50h] [rbp-168h]
-  cMapSlot v34[MAX_LOD_SLOTS]; // [rsp+90h] [rbp-128h] ext this
-
   typedef int(*GetAreaIdForCoords_Fn)(int, int, int);
   GetAreaIdForCoords_Fn GetAreaIdForCoords = (GetAreaIdForCoords_Fn)(mBaseAddress + 0x7C2E60);
-  fn_3args AddVects = (fn_3args)(mBaseAddress + 0x265F00);
-  fn_2args CopyVect4 = (fn_2args)(mBaseAddress + 0x263E80);
+  fn_3args Vect4Add = (fn_3args)(mBaseAddress + 0x265F00);
+  fn_2args Vect4Copy = (fn_2args)(mBaseAddress + 0x263E80);
 
-  v3 = *(int*)(a3 + 20);
-  v5 = *(int*)(a3 + 16);
-  v6 = 0;
-  std::memset(v32, 0xFF, MAX_LOD_SLOTS * sizeof(int));
+  int prevSlotForSection[MAX_LOD_SLOTS];
+  int curSlotAreaIds[MAX_LOD_SLOTS * 2];
+  cMapSlot mapSections[MAX_LOD_SLOTS];
+
+  std::memset(prevSlotForSection, 0xFF, MAX_LOD_SLOTS * sizeof(int));
+
+  int x_pos = *(int*)(a3 + 16);
+  int y_pos = *(int*)(a3 + 20);
 
 #ifdef _DEBUG
   auto report = BuildReport(a1);
-  int playerArea = GetAreaIdForCoords(v5, v3, 1);
+  int playerArea = GetAreaIdForCoords(x_pos, y_pos, 1);
   playerArea = playerArea;
 #endif
 
   g11420IsLoaded = false;
 
+  int i = 0;
   do
   {
-    v34[v6].AreaId = GetAreaIdForCoords(
-      LodInfo[v6].coords.value[0] + v5,
-      LodInfo[v6].coords.value[1] + v3,
+    mapSections[i].AreaId = GetAreaIdForCoords(
+      LodInfo[i].coords.value[0] + x_pos,
+      LodInfo[i].coords.value[1] + y_pos,
       1);
 
-    if ((v34[v6].AreaId & 0xFFFF) == 0x1420)
+    if ((mapSections[i].AreaId & 0xFFFF) == 0x1420)
       g11420IsLoaded = true;
 
-    AddVects(&v34[v6], a3, &LodInfo[v6].position);
+    Vect4Add(&mapSections[i], a3, &LodInfo[i].position);
 
-    v34[v6].AreaPosition.value[3] = 1.f;
+    mapSections[i].AreaPosition.value[3] = 1.f;
 
-    if (v6 < 0 || v6 >= (signed int)a1->max_count)
-      v12 = -1;
+    if (i < 0 || i >= a1->max_count)
+    {
+      curSlotAreaIds[(i * 2)] = -1;
+      curSlotAreaIds[(i * 2) + 1] = -1;
+    }
     else
-      v12 = a1->map_sections[v6].DesiredAreaId;
+    {
+      curSlotAreaIds[(i * 2)] = a1->map_sections[i].DesiredAreaId;
+      curSlotAreaIds[(i * 2) + 1] = a1->map_sections[i].CurrentAreaId;
+    }
 
-    v33[(v6 * 2)] = v12;
+    ++i;
+  } while (i < NumHQMapSlots);
 
-    if (v6 < 0 || v6 >= (signed int)a1->max_count)
-      v13 = -1;
-    else
-      v13 = a1->map_sections[v6].CurrentAreaId;
-
-    v33[(v6 * 2) + 1] = v13;
-
-    ++v6;
-  } while (v6 < NumHQMapSlots);
-
-  v14 = &v33[1];
-  v15 = 0;
-  v16 = 0;
+  i = 0;
   do
   {
-    v17 = *(v14 - 1);
-    if (v17 != -1 || *v14 != -1)
+    if (curSlotAreaIds[(i * 2)] != -1 || curSlotAreaIds[(i * 2) + 1] != -1)
     {
-      v18 = 0;
-      v19 = 0;
+      int j = 0;
       do
       {
-        v20 = v34[v18].AreaId;
-        if (v17 == v20 || *v14 == v20)
+        int area_id = mapSections[j].AreaId;
+        if (curSlotAreaIds[(i * 2)] == area_id || curSlotAreaIds[(i * 2) + 1] == area_id)
         {
-          v32[v19] = v15;
+          prevSlotForSection[j] = i;
           goto LABEL_25;
         }
-        ++v18;
-        ++v19;
-      } while (v18 < NumHQMapSlots);
+        ++j;
+      } while (j < NumHQMapSlots);
 
-      if (a1->unk14 && v15 >= 0 && v15 < (signed int)a1->max_count)
+      if (a1->is_active && i >= 0 && i < a1->max_count)
       {
-        a1->map_sections[v15].DesiredAreaId = -1;
+        a1->map_sections[i].DesiredAreaId = -1;
         a1->unk18 = 0;
       }
 
-      *(int64_t*)(v14 - 1) = -1i64;
+      curSlotAreaIds[(i * 2)] = -1;
+      curSlotAreaIds[(i * 2) + 1] = -1;
     }
   LABEL_25:
-    ++v15;
-    v16 += 0x50;
-    v14 += 2;
-  } while (v15 < NumHQMapSlots);
+    ++i;
+  } while (i < NumHQMapSlots);
 
-  v21 = v32;
-  v22 = v34;
-  v23 = 0;
+  i = 0;
   do
   {
-    result = *v21;
-    if ((int)result == -1)
+    int prevSlot = prevSlotForSection[i];
+    if (prevSlot == -1)
     {
-      v27 = 0;
-      v28 = 0;
-      while (v33[2 * v28] != -1 && v33[2 * v28 + 1] != -1 || !a1->unk14 || v28 < 0 || v27 >= (signed int)a1->max_count)
+      int j = 0;
+      while (curSlotAreaIds[j * 2] != -1 && curSlotAreaIds[(j * 2) + 1] != -1 || !a1->is_active || j < 0 || j >= a1->max_count)
       {
-        ++v28;
-        ++v27;
-        if (v28 >= NumHQMapSlots)
+        ++j;
+        if (j >= NumHQMapSlots)
           goto LABEL_44;
       }
 
+      a1->map_sections[j].DesiredAreaId = mapSections[i].AreaId;
+      Vect4Copy(&a1->map_sections[j].Position, mapSections[i].AreaPosition.value);
+      a1->map_sections[j].LoadNewArea = 1;
 
-      a1->map_sections[v28].DesiredAreaId = v22->AreaId;
-      CopyVect4(&a1->map_sections[v28].Position, v22->AreaPosition.value);
-      a1->map_sections[v28].LoadNewArea = 1;
-
-      v33[2 * v28] = v22->AreaId;
-      v33[2 * v28 + 1] = v22->AreaId;
-      *v21 = v27;
+      curSlotAreaIds[j * 2] = mapSections[i].AreaId;
+      curSlotAreaIds[(j * 2) + 1] = mapSections[i].AreaId;
+      prevSlotForSection[i] = j;
 
       a1->unk18 = 0;
     }
     else
     {
-      v25 = v22->AreaId;
-      if ((v33[2 * result] != v25 || v33[2 * result + 1] != v25)
-        && a1->unk14
-        && (int)result >= 0
-        && (int)result < (signed int)a1->max_count)
+      int area_id = mapSections[i].AreaId;
+      if ((curSlotAreaIds[2 * prevSlot] != area_id || curSlotAreaIds[2 * prevSlot + 1] != area_id)
+        && a1->is_active
+        && prevSlot >= 0
+        && prevSlot < a1->max_count)
       {
-        a1->map_sections[result].DesiredAreaId = v25;
-        CopyVect4(&a1->map_sections[result].Position, v22->AreaPosition.value);
-        a1->map_sections[result].LoadNewArea = 1;
+        a1->map_sections[prevSlot].DesiredAreaId = area_id;
+        Vect4Copy(&a1->map_sections[prevSlot].Position, mapSections[i].AreaPosition.value);
+        a1->map_sections[prevSlot].LoadNewArea = 1;
 
         a1->unk18 = 0;
       }
     }
 
   LABEL_44:
-    ++v22;
-    ++v21;
-    ++v23;
-  } while (v23 < NumHQMapSlots);
+    ++i;
+  } while (i < NumHQMapSlots);
 
 #ifdef _DEBUG
   auto report2 = BuildReport(a1);
   report = report;
 #endif
-
-  return result;
 }
 
 uint32_t PrevNumLods = 7;
@@ -362,9 +326,6 @@ void MapMod_Init()
   NumHQMapSlots = MAX_LOD_SLOTS;
 #endif
 
-  if (NumHQMapSlots == 7)
-    return; // nothing to change;
-
   PrevNumLods = *(uint8_t*)(mBaseAddress + 0x7C72C7 + 2);
 
   if (NumHQMapSlots > MAX_LOD_SLOTS)
@@ -384,6 +345,10 @@ void MapMod_Init()
 
   // Set cHighMapController constructor to use our LOD slot count
   SafeWrite(mBaseAddress + 0x7C72C7 + 2, (uint8_t)NumHQMapSlots);
+
+  // Hook cHighMapController::UpdateSlots func to use our reimplementation instead
+  // (reimplemented ver allows variable number of slots, and can read from NewSlots instead)
+  MH_CreateHook((LPVOID)(mBaseAddress + 0x815420), cHighMapController__UpdateSlots_Hook, NULL);
 
   // Update load-list ptr to block of unused space
   SafeWrite(mBaseAddress + 0x108734 + 3, (uint32_t)(0x114d005 + 0x5566C0));
@@ -419,8 +384,4 @@ void MapMod_Init()
   //SafeWrite(mBaseAddress + 0x7C74C2 + 1, (uint32_t)1);
   //SafeWrite(mBaseAddress + 0x815C61 + 3, (uint8_t)0x10); // alternate
   //SafeWrite(mBaseAddress + 0x815D20 + 3, (uint8_t)0x10); // alternate
-
-  // Hook cHighMapController::Update func to use our reimplementation instead
-  // (reimplemented ver allows variable number of slots, and can read from NewSlots instead)
-  MH_CreateHook((LPVOID)(mBaseAddress + 0x815420), cHighMapController_Update, NULL);
 }

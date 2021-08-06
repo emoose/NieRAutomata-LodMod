@@ -8,9 +8,20 @@
 #include "MinHook/MinHook.h"
 #include <mutex>
 #include <thread>
+#include <unordered_map>
+
+#include <locale>
+#include <codecvt>
+#include <string>
 
 // Rebug: hooks to add some debug-flag checks back into functions, based on NA debug exe
 
+// Configurables:
+std::unordered_map<int, std::vector<std::string>> SoftFilteredModels;
+std::unordered_map<int, std::vector<std::string>> HardFilteredModels;
+
+// dllmain.cpp:
+extern WCHAR IniPath[4096];
 extern uintptr_t mBaseAddress;
 extern int version;
 
@@ -63,15 +74,68 @@ extern bool DisableManualCulling;
 
 #ifdef _DEBUG
 bool LogModels = false;
+bool LogPassedModels = false;
 std::vector<std::string> CulledModels;
+std::vector<std::string> PassedModels;
 std::mutex CulledModelsMutex;
 std::vector<std::string> ForcedCulls;
 std::mutex ForcedCullsMutex;
 
 char ModelsToSkip[16384] = { 0 };
+char ModelsToCull[16384] = { 0 };
 #endif
 
 extern bool g11420IsLoaded;
+
+template <typename I> std::string n2hexstr(I w, size_t hex_len = sizeof(I) << 1) {
+  static const char* digits = "0123456789ABCDEF";
+  std::string rc(hex_len+3, '0');
+  rc[0] = '0';
+  rc[1] = 'x';
+  for (size_t i = 2, j = (hex_len - 1) * 4; i < hex_len+2; ++i, j -= 4)
+    rc[i] = digits[(w >> j) & 0x0f];
+  rc[hex_len + 2] = '_';
+  return rc;
+}
+
+const uint32_t Global_PlayerCoords_Addr[] = { 0xF568B0, 0xF498B0, 0xFD4620 };
+
+int GetPlayerAreaId()
+{
+  // TODO: find a better method than this!
+  int* position_ptr = reinterpret_cast<int32_t*>(mBaseAddress + Global_PlayerCoords_Addr[version]);
+
+  uint32_t x_pos = (uint8_t)position_ptr[0];
+  uint32_t y_pos = (uint8_t)position_ptr[1];
+
+  return (x_pos << 8) | y_pos;
+}
+
+inline std::string GetFullModelName(int area_id, const std::string& model_name)
+{
+  return n2hexstr(area_id, 4) + model_name;
+}
+
+bool ShouldForceCull(int area_id, const std::string& lower_model_name)
+{
+  // x1319 has an ugly dummy LOD for the resistance camp building, kill it if resistance camp is loaded
+  if (area_id == 0x1319 && lower_model_name == "g11420_dummybuild" && g11420IsLoaded)
+    return (void*)1;
+
+  auto player_area = GetPlayerAreaId();
+  if (HardFilteredModels.count(player_area))
+  {
+    auto testName = GetFullModelName(area_id, lower_model_name);
+    auto& areasToFilterInside = HardFilteredModels[player_area];
+    for (auto modelName : areasToFilterInside)
+      if (modelName == testName)
+        return true;
+  }
+#ifdef _DEBUG
+  return strstr(ModelsToCull, model_name) != NULL;
+#endif
+  return false;
+}
 
 fn_2args Model_ShouldBeCulled_Orig;
 void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
@@ -87,49 +151,23 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
   // remove game-stage (beginning/middle/end) from area id
   int area_id = area_id_full & 0xFFFF;
 
-  // x1319 has an ugly dummy LOD for the resistance camp building, kill it if resistance camp is loaded
-  if (area_id == 0x1319 && !strcmp(model_name, "g11420_dummybuild") && g11420IsLoaded)
+  std::string lower_name = model_name;
+  std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
+    [](unsigned char c) { return std::tolower(c); });
+
+  // checks if we should forcibly cull this model (return true) instead of passing it to Model_ShouldBeCulled_Orig 
+  if (ShouldForceCull(area_id, lower_name))
     return (void*)1;
 
   if (DisableManualCulling)
   {
-    std::string lower_name = model_name;
-    std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
-      [](unsigned char c) { return std::tolower(c); });
-
     // exclude "low"/"lod"/"dummy" models, we want to keep those cullable
     bool lowModel =
       lower_name.find("low") != std::string::npos ||
       lower_name.find("lod") != std::string::npos ||
       lower_name.find("dummy") != std::string::npos ||
       lower_name.find("distant") != std::string::npos ||
-      lower_name.find("far") != std::string::npos ||
-
-      // forest/shopping center LODs near desert entrance
-      (area_id == 0x1316 &&
-        (lower_name == "mall" ||
-          lower_name == "cliff" ||
-          lower_name == "maintree")) ||
-
-      // factory LODs showing near desert start
-      // theres 1 more factory LOD that quickly appears/disappears near desert start above an arch
-      // but its not caused by DisableManualCulling, ugh...
-      (area_id == 0x0921 && lower_name.find("mtrobot5") != std::string::npos) ||
-      (area_id == 0x1021 && lower_name.find("mtrobot9") != std::string::npos) || // catches mtrobot9 & mtrobot9_1
-
-      // misplaced LOD ground near desert housing
-      (area_id == 0x1115 && lower_name == "g11015_ground") ||
-
-      // LOD near forest waterfalls
-      (area_id == 0x1214 && lower_name == "buildddddddddddd") ||
-
-      // misplaced LOD ground intersecting desert oasis ground
-      (area_id == 0x0318 && lower_name == "g10218_ground") ||
-
-      // mountain LODs from amusement park showing near forest castle
-      // (sadly there's a wall that pops in/out near forest castle which ruins the view of amusement park... hope it can be fixed eventually, with the wall there it looks great)
-      (area_id == 0x1616 && lower_name == "g11616_enkei_mountain") ||
-      (area_id == 0x1816 && lower_name == "g11816_mountain");
+      lower_name.find("far") != std::string::npos;
 
     if (lowModel)
     {
@@ -141,6 +179,21 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
         // haven't found a way to change that yet)
         if (lower_name.find("far") == std::string::npos)
           lowModel = false;
+    }
+
+    if (!lowModel && SoftFilteredModels.count(area_id))
+    {
+      auto& area_filters = SoftFilteredModels[area_id];
+      lowModel = std::find(area_filters.begin(), area_filters.end(), lower_name) != area_filters.end();
+    }
+
+    // if area_id isn't known, use 0 for this to filter it:
+    if (!lowModel && SoftFilteredModels.count(0))
+    {
+      auto& area_filters = SoftFilteredModels[0];
+      lowModel = std::find(area_filters.begin(), area_filters.end(), lower_name) != area_filters.end();
+      if (lowModel)
+        lowModel = lowModel;
     }
 
 #ifdef _DEBUG
@@ -162,6 +215,8 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
       if (std::find(ForcedCulls.cbegin(), ForcedCulls.cend(), lower_name) != ForcedCulls.cend())
         lowModel = true;
     }
+
+    lower_name = GetFullModelName(area_id, lower_name.c_str());
 #endif
 
     // Not a low model, return false to disable culling on this
@@ -182,6 +237,18 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
     }
   }
 
+
+#ifdef _DEBUG
+  if (LogPassedModels)
+  {
+    std::lock_guard<std::mutex> lock(ForcedCullsMutex);
+    if (std::find(CulledModels.cbegin(), CulledModels.cend(), lower_name) == CulledModels.cend())
+    {
+      OutputDebugStringA((lower_name + std::string("\n")).c_str());
+      CulledModels.push_back(lower_name);
+    }
+  }
+#endif
   return Model_ShouldBeCulled_Orig((void*)area_id_full, model_name);
 }
 
@@ -205,8 +272,52 @@ void* Model_LodSetup_Hook()
   return ret;
 }
 
+TCHAR	szBuffer[65535];
+void LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vector<std::string>>& list)
+{
+  szBuffer[0] = 0;
+
+  GetPrivateProfileSection(listName, szBuffer, 65535, IniPath);
+  TCHAR* curString = szBuffer;
+  for (TCHAR* cp = szBuffer; ; cp++)
+  {
+    if (!cp[0])
+    {
+      // end of line
+      auto* sep = wcsstr(curString, L"=");
+      if (!sep)
+        break;
+      *sep = L'\0';
+      sep++;
+      auto* key = curString;
+      auto* value = sep;
+
+      std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+      std::string model_name = converter.to_bytes(key);
+      auto area_id = std::stol(std::wstring(value), nullptr, 0) & 0xFFFF;
+
+      if (!list.count(area_id))
+        list[area_id] = std::vector<std::string>();
+
+      list[area_id].push_back(model_name);
+
+      curString = &cp[1];
+
+      if (!curString[0])
+      {
+        // end of file
+        break;
+      }
+    }
+  }
+}
+
 void Rebug_Init()
 {
+  // Load in our filter lists if we have any...
+  LoadINIFilterList(L"SoftFilteredModels", SoftFilteredModels);
+  LoadINIFilterList(L"HardFilteredModels", HardFilteredModels);
+
   MH_CreateHook((LPVOID)(mBaseAddress + Model_ShouldBeCulled_Addr[version]), Model_ShouldBeCulled_Hook, (LPVOID*)&Model_ShouldBeCulled_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + Model_LodSetup_Addr[version]), Model_LodSetup_Hook, (LPVOID*)&Model_LodSetup_Orig);
 }
