@@ -326,6 +326,9 @@ void MapMod_Init()
   NumHQMapSlots = MAX_LOD_SLOTS;
 #endif
 
+  if (NumHQMapSlots <= 7)
+    return;
+
   PrevNumLods = *(uint8_t*)(mBaseAddress + 0x7C72C7 + 2);
 
   if (NumHQMapSlots > MAX_LOD_SLOTS)
