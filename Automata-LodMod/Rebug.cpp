@@ -78,8 +78,6 @@ bool LogPassedModels = false;
 std::vector<std::string> CulledModels;
 std::vector<std::string> PassedModels;
 std::mutex CulledModelsMutex;
-std::vector<std::string> ForcedCulls;
-std::mutex ForcedCullsMutex;
 
 char ModelsToSkip[16384] = { 0 };
 char ModelsToCull[16384] = { 0 };
@@ -132,7 +130,7 @@ bool ShouldForceCull(int area_id, const std::string& lower_model_name)
         return true;
   }
 #ifdef _DEBUG
-  return strstr(ModelsToCull, model_name) != NULL;
+  return strstr(ModelsToCull, lower_model_name.c_str()) != NULL;
 #endif
   return false;
 }
@@ -203,20 +201,6 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
     bool clearCulled = false;
     if (clearCulled)
       CulledModels.clear();
-
-    if (!lowModel)
-    {
-      std::lock_guard<std::mutex> lock(ForcedCullsMutex);
-
-      bool forceCullThis = false;
-      if (forceCullThis)
-        ForcedCulls.push_back(lower_name);
-
-      if (std::find(ForcedCulls.cbegin(), ForcedCulls.cend(), lower_name) != ForcedCulls.cend())
-        lowModel = true;
-    }
-
-    lower_name = GetFullModelName(area_id, lower_name.c_str());
 #endif
 
     // Not a low model, return false to disable culling on this
@@ -225,7 +209,7 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
 #ifdef _DEBUG
       if (LogModels)
       {
-        std::lock_guard<std::mutex> lock(ForcedCullsMutex);
+        std::lock_guard<std::mutex> lock(CulledModelsMutex);
         if (std::find(CulledModels.cbegin(), CulledModels.cend(), lower_name) == CulledModels.cend())
         {
           OutputDebugStringA((lower_name + "\n").c_str());
@@ -241,10 +225,10 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
 #ifdef _DEBUG
   if (LogPassedModels)
   {
-    std::lock_guard<std::mutex> lock(ForcedCullsMutex);
+    std::lock_guard<std::mutex> lock(CulledModelsMutex);
     if (std::find(CulledModels.cbegin(), CulledModels.cend(), lower_name) == CulledModels.cend())
     {
-      OutputDebugStringA((lower_name + std::string("\n")).c_str());
+      OutputDebugStringA((GetFullModelName(area_id, lower_name.c_str()) + std::string("\n")).c_str());
       CulledModels.push_back(lower_name);
     }
   }
@@ -294,6 +278,10 @@ void LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vec
 
       std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
       std::string model_name = converter.to_bytes(key);
+
+      std::transform(model_name.begin(), model_name.end(), model_name.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+
       auto area_id = std::stol(std::wstring(value), nullptr, 0) & 0xFFFF;
 
       if (!list.count(area_id))
