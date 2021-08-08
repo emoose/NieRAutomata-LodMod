@@ -1,12 +1,55 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
 // Windows Header Files
 #include <windows.h>
 
 #include "MinHook/MinHook.h"
 
 extern uintptr_t mBaseAddress;
+
+// dllmain.cpp
+extern HMODULE DllHModule;
+extern HMODULE GameHModule;
+extern uintptr_t mBaseAddress;
+void LodMod_Init();
+
+void Rebug_Init(); // Rebug.cpp
+
+// Configurables
+struct LodModSettings
+{
+  bool DebugLog;
+  float LODMultiplier;
+  float AOMultiplierWidth;
+  float AOMultiplierHeight;
+  int ShadowResolution;
+  float ShadowDistanceMinimum;
+  float ShadowDistanceMaximum;
+  float ShadowDistanceMultiplier;
+  bool DisableManualCulling;
+  float ShadowFilterStrengthBias;
+  float ShadowFilterStrengthMinimum;
+  float ShadowFilterStrengthMaximum;
+  int CommunicationScreenResolution;
+  int HQMapSlots;
+  WCHAR WrapperLoadLibrary[4096];
+};
+extern LodModSettings Settings;
+extern uintptr_t mBaseAddress;
+extern int version;
+extern WCHAR LogPath[4096];
+extern WCHAR IniPath[4096];
+
+// MapMod.cpp
+extern bool g11420IsLoaded;
+void MapMod_Init();
+
+// proxy.cpp
+extern WCHAR origModulePath[4096];
+bool Proxy_Attach();
+void Proxy_Detach();
+void Proxy_InitSteamStub();
 
 // Utility.cpp
 bool FileExists(const WCHAR* Filename);

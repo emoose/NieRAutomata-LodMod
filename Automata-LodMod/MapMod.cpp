@@ -7,10 +7,6 @@
 #include <string>
 #include <sstream>
 
-extern uintptr_t mBaseAddress;
-extern int version;
-extern int NumHQMapSlots;
-
 #pragma pack(push, 1)
 struct cLodSlot
 {
@@ -104,13 +100,14 @@ cLodSlot LodInfo[22] =
   // New slots
   // Games position-calculation func doesn't work properly for distance = 2, so had to find these manually...
   /*  7 */ {{1,-2,0,0}, {150,0,-259.807617f,0}},
-  /*  8 */ {{0,-2,0,0},  {0,0,-346.410156f,0}},
+  /* 14 */ {{0,2,0,0},   {0,0,346.410156f,0}}, // swapped 14 & 8
+
   /*  9 */ {{-1,-1,0,0}, {-150,0,-259.807617f,0}},
   /* 10 */ {{-2,0,0,0},  {-300,0,-173.205078f,0}},
   /* 11 */ {{-2,1,0,0},  {-300,0,0,0}},
   /* 12 */ {{-2,2,0,0},  {-300,0,173.205078f,0}},
   /* 13 */ {{-1,2,0,0},  {-150,0,259.807617f,0}},
-  /* 14 */ {{0,2,0,0},   {0,0,346.410156f,0}},
+  /*  8 */ {{0,-2,0,0},  {0,0,-346.410156f,0}},
 
   // Seems to be another limit for 14 slots in the LowMapController stuff & other related crap, wew
   // If enabled these will break something and cause low-LOD to be stuck loaded with no way to load the HQ ver...
@@ -124,7 +121,7 @@ cLodSlot LodInfo[22] =
 std::string BuildReport(cHighMapController* ctl)
 {
   std::stringstream ss;
-  for (int i = 0; i < NumHQMapSlots; i++)
+  for (int i = 0; i < Settings.HQMapSlots; i++)
   {
     auto& mapData = ctl->map_sections[i];
 
@@ -188,7 +185,7 @@ void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BY
     }
 
     ++i;
-  } while (i < NumHQMapSlots);
+  } while (i < Settings.HQMapSlots);
 
   i = 0;
   do
@@ -205,7 +202,7 @@ void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BY
           goto LABEL_25;
         }
         ++j;
-      } while (j < NumHQMapSlots);
+      } while (j < Settings.HQMapSlots);
 
       if (a1->is_active && i >= 0 && i < a1->max_count)
       {
@@ -218,7 +215,7 @@ void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BY
     }
   LABEL_25:
     ++i;
-  } while (i < NumHQMapSlots);
+  } while (i < Settings.HQMapSlots);
 
   i = 0;
   do
@@ -230,7 +227,7 @@ void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BY
       while (curSlotAreaIds[j * 2] != -1 && curSlotAreaIds[(j * 2) + 1] != -1 || !a1->is_active || j < 0 || j >= a1->max_count)
       {
         ++j;
-        if (j >= NumHQMapSlots)
+        if (j >= Settings.HQMapSlots)
           goto LABEL_44;
       }
 
@@ -262,7 +259,7 @@ void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BY
 
   LABEL_44:
     ++i;
-  } while (i < NumHQMapSlots);
+  } while (i < Settings.HQMapSlots);
 
 #ifdef _DEBUG
   auto report2 = BuildReport(a1);
@@ -279,7 +276,7 @@ void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, void*
   if (!strcmp(heapName, "TEXTURE ROOT"))
   {
     uint32_t aHighMapVramOld = (uint32_t)(0x6400000 * PrevNumLods);
-    uint32_t aHighMapVramNew = (uint32_t)(0x6400000 * NumHQMapSlots);
+    uint32_t aHighMapVramNew = (uint32_t)(0x6400000 * Settings.HQMapSlots);
 
     heapSize -= aHighMapVramOld;
     heapSize += aHighMapVramNew;
@@ -287,7 +284,7 @@ void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, void*
   else if (!strcmp(heapName, "FILE ROOT"))
   {
     uint32_t aHighMapFileOld = (uint32_t)(0x1600000 * PrevNumLods);
-    uint32_t aHighMapFileNew = (uint32_t)(0x1600000 * NumHQMapSlots);
+    uint32_t aHighMapFileNew = (uint32_t)(0x1600000 * Settings.HQMapSlots);
 
     heapSize -= aHighMapFileOld;
     heapSize += aHighMapFileNew;
@@ -322,32 +319,28 @@ void LoadListSetup_Hook(BYTE* a1)
 
 void MapMod_Init()
 {
-#ifdef _DEBUG
-  NumHQMapSlots = MAX_LOD_SLOTS;
-#endif
-
-  if (NumHQMapSlots <= 7)
+  if (Settings.HQMapSlots <= 7)
     return;
 
   PrevNumLods = *(uint8_t*)(mBaseAddress + 0x7C72C7 + 2);
 
-  if (NumHQMapSlots > MAX_LOD_SLOTS)
-    NumHQMapSlots = MAX_LOD_SLOTS;
+  if (Settings.HQMapSlots > MAX_LOD_SLOTS)
+    Settings.HQMapSlots = MAX_LOD_SLOTS;
 
   // Increase memory buffers to handle the increased LOD slots...
   uint32_t aHighMapVramOld = (uint32_t)(0x6400000 * PrevNumLods);
-  uint32_t aHighMapVramNew = (uint32_t)(0x6400000 * NumHQMapSlots);
+  uint32_t aHighMapVramNew = (uint32_t)(0x6400000 * Settings.HQMapSlots);
   SafeWrite(mBaseAddress + 0x86BB38 + 1, aHighMapVramNew);
 
   uint32_t aHighMapFileOld = (uint32_t)(0x1600000 * PrevNumLods);
-  uint32_t aHighMapFileNew = (uint32_t)(0x1600000 * NumHQMapSlots);
+  uint32_t aHighMapFileNew = (uint32_t)(0x1600000 * Settings.HQMapSlots);
   SafeWrite(mBaseAddress + 0x86B8A1 + 1, aHighMapFileNew);
 
   // Hook root heap init func so we can increase buffers past 32-bits
   MH_CreateHook((LPVOID)(mBaseAddress + 0x2622B0), MemorySystem__CreateRootHeap_Hook, (LPVOID*)&MemorySystem__CreateRootHeap_Orig);
 
   // Set cHighMapController constructor to use our LOD slot count
-  SafeWrite(mBaseAddress + 0x7C72C7 + 2, (uint8_t)NumHQMapSlots);
+  SafeWrite(mBaseAddress + 0x7C72C7 + 2, (uint8_t)Settings.HQMapSlots);
 
   // Hook cHighMapController::UpdateSlots func to use our reimplementation instead
   // (reimplemented ver allows variable number of slots, and can read from NewSlots instead)
@@ -379,6 +372,7 @@ void MapMod_Init()
   SafeWrite(mBaseAddress + 0x83182F + 3, (uint8_t)(loadSlotCount));
 
   MH_CreateHook((LPVOID)(mBaseAddress + 0x830D40), LoadListSetup_Hook, NULL);
+
   // Uncomment this to let game set up the LOD slot coordinates
   // It does this incorrectly for the distance = 2 slots though ;_;
   //SafeWrite(mBaseAddress + 0x7C743E + 2, (uint8_t)(NUM_SLOTS_TO_UPDATE - 1));

@@ -117,12 +117,9 @@ HWND FindMainWindow(DWORD process_id)
   return data.window_handle;
 }
 
-extern WCHAR LogPath[4096];
-extern bool DebugLog;
-
 void dlog(const char* Format, ...)
 {
-  if (!DebugLog)
+  if (!Settings.DebugLog)
     return;
 
   char* str = new char[4096];

@@ -21,9 +21,6 @@ std::unordered_map<int, std::vector<std::string>> SoftFilteredModels;
 std::unordered_map<int, std::vector<std::string>> HardFilteredModels;
 
 // dllmain.cpp:
-extern WCHAR IniPath[4096];
-extern uintptr_t mBaseAddress;
-extern int version;
 
 const uint32_t Flag_DBG_Addr[] = { 0x1029840, 0x101C750, 0x10AC3E0 };
 const uint32_t Flag_DBSTP_Addr[] = { 0x102987C, 0x101C78C, 0x10AC41C };
@@ -70,8 +67,6 @@ bool CheckFlag(DBGRAPHIC_FLAG flag)
 const uint32_t Model_ShouldBeCulled_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960 };
 const uint32_t Model_ShouldBeCulled_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0 };
 
-extern bool DisableManualCulling;
-
 #ifdef _DEBUG
 bool LogModels = false;
 bool LogPassedModels = false;
@@ -82,8 +77,6 @@ std::mutex CulledModelsMutex;
 char ModelsToSkip[16384] = { 0 };
 char ModelsToCull[16384] = { 0 };
 #endif
-
-extern bool g11420IsLoaded;
 
 template <typename I> std::string n2hexstr(I w, size_t hex_len = sizeof(I) << 1) {
   static const char* digits = "0123456789ABCDEF";
@@ -153,11 +146,14 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
   std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
     [](unsigned char c) { return std::tolower(c); });
 
-  // checks if we should forcibly cull this model (return true) instead of passing it to Model_ShouldBeCulled_Orig 
-  if (ShouldForceCull(area_id, lower_name))
-    return (void*)1;
+  // checks if we should forcibly cull this model (return true) instead of passing it to Model_ShouldBeCulled_Orig
+#ifdef _DEBUG
+  if(lower_name != "ground")
+#endif
+    if (ShouldForceCull(area_id, lower_name))
+      return (void*)1;
 
-  if (DisableManualCulling)
+  if (Settings.DisableManualCulling)
   {
     // exclude "low"/"lod"/"dummy" models, we want to keep those cullable
     bool lowModel =
@@ -257,9 +253,11 @@ void* Model_LodSetup_Hook()
 }
 
 TCHAR	szBuffer[65535];
-void LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vector<std::string>>& list)
+int LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vector<std::string>>& list)
 {
   szBuffer[0] = 0;
+
+  int count = 0;
 
   GetPrivateProfileSection(listName, szBuffer, 65535, IniPath);
   TCHAR* curString = szBuffer;
@@ -288,6 +286,7 @@ void LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vec
         list[area_id] = std::vector<std::string>();
 
       list[area_id].push_back(model_name);
+      count++;
 
       curString = &cp[1];
 
@@ -298,13 +297,20 @@ void LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vec
       }
     }
   }
+  return count;
 }
 
 void Rebug_Init()
 {
   // Load in our filter lists if we have any...
-  LoadINIFilterList(L"SoftFilteredModels", SoftFilteredModels);
-  LoadINIFilterList(L"HardFilteredModels", HardFilteredModels);
+  int numSoft = LoadINIFilterList(L"SoftFilteredModels", SoftFilteredModels);
+  int numHard = LoadINIFilterList(L"HardFilteredModels", HardFilteredModels);
+
+  if (Settings.DebugLog)
+  {
+    dlog(" SoftFilteredModels: loaded %d filters\n", numSoft);
+    dlog(" HardFilteredModels: loaded %d filters\n", numHard);
+  }
 
   MH_CreateHook((LPVOID)(mBaseAddress + Model_ShouldBeCulled_Addr[version]), Model_ShouldBeCulled_Hook, (LPVOID*)&Model_ShouldBeCulled_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + Model_LodSetup_Addr[version]), Model_LodSetup_Hook, (LPVOID*)&Model_LodSetup_Orig);
