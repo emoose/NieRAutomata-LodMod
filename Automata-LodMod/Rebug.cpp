@@ -22,15 +22,22 @@ std::unordered_map<int, std::vector<std::string>> HardFilteredModels;
 
 // dllmain.cpp:
 
-const uint32_t Flag_DBG_Addr[] = { 0x1029840, 0x101C750, 0x10AC3E0 };
-const uint32_t Flag_DBSTP_Addr[] = { 0x102987C, 0x101C78C, 0x10AC41C };
-const uint32_t Flag_DBDISP_Addr[] = { 0x1029860, 0x101C770, 0x10AC400 };
-const uint32_t Flag_DBGRAPHIC_Addr[] = { 0x102988C, 0x101C79C, 0x10AC42C };
-const uint32_t Flag_STA_Addr[] = { 0x10297C0, 0x101C6D0, 0x10AC360 };
-const uint32_t Flag_STOP_Addr[] = { 0x10297D0, 0x101C6E0, 0x10AC370 };
-const uint32_t Flag_GRAPHIC_Addr[] = { 0x10297E0, 0x101C6F0, 0x10AC380 };
-const uint32_t Flag_DISP_Addr[] = { 0x10297F8, 0x101C708, 0x10AC398 };
-const uint32_t Flag_GAME_Addr[] = { 0x10297F0, 0x101C700, 0x10AC390 };
+const uint32_t Flag_DBG_Addr[] = { 0x1029840, 0x101C750, 0x10AC3E0, 0x1415B90, 0x20D9E38 };
+const uint32_t Flag_DBSTP_Addr[] = { 0x102987C, 0x101C78C, 0x10AC41C, 0x1415BCC, 0x20D9E74 };
+const uint32_t Flag_DBDISP_Addr[] = { 0x1029860, 0x101C770, 0x10AC400, 0x1415BB0, 0x20D9E58 };
+const uint32_t Flag_DBGRAPHIC_Addr[] = { 0x102988C, 0x101C79C, 0x10AC42C, 0x1415BDC, 0x20D9E84 };
+
+const uint32_t Flag_STA_Addr[] = { 0x10297C0, 0x101C6D0, 0x10AC360, 0x1415B10, 0x20D9D30 };
+const uint32_t Flag_STOP_Addr[] = { 0x10297D0, 0x101C6E0, 0x10AC370, 0x1415B20, 0x20D9D40 };
+const uint32_t Flag_GRAPHIC_Addr[] = { 0x10297E0, 0x101C6F0, 0x10AC380, 0x1415B30, 0x20D9D50 };
+const uint32_t Flag_DISP_Addr[] = { 0x10297F8, 0x101C708, 0x10AC398, 0x1415B48, 0x20D9D68 };
+const uint32_t Flag_GAME_Addr[] = { 0x10297F0, 0x101C700, 0x10AC390, 0x1415B40, 0x20D9D60 };
+
+const uint32_t Model_ShouldBeCulled_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960, 0x5BD210, 0x9543E0 };
+const uint32_t Model_ShouldBeCulled_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0, 0x147BEC0, 0x237F290 };
+
+const uint32_t Global_PlayerCoords_Addr[] = { 0xF568B0, 0xF498B0, 0xFD4620, 0x1082DF0, 0x1F51020 };
+const uint32_t ModelManager__Update_Addr[] = { 0x846260, 0x83DBB0, 0x86CF90, 0x61D440, 0x9CAB50 }; // sets up global/per-model LOD?
 
 uint32_t GetFlagValue(DBG_FLAG flag, uint32_t& address)
 {
@@ -64,9 +71,6 @@ bool CheckFlag(DBGRAPHIC_FLAG flag)
   return (*reinterpret_cast<uint32_t*>(mBaseAddress + address) & rawFlag) != 0;
 }
 
-const uint32_t Model_ShouldBeCulled_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960 };
-const uint32_t Model_ShouldBeCulled_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0 };
-
 #ifdef _DEBUG
 bool LogModels = false;
 bool LogPassedModels = false;
@@ -88,8 +92,6 @@ template <typename I> std::string n2hexstr(I w, size_t hex_len = sizeof(I) << 1)
   rc[hex_len + 2] = '_';
   return rc;
 }
-
-const uint32_t Global_PlayerCoords_Addr[] = { 0xF568B0, 0xF498B0, 0xFD4620 };
 
 int GetPlayerAreaId()
 {
@@ -232,12 +234,11 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
   return Model_ShouldBeCulled_Orig((void*)area_id_full, model_name);
 }
 
-const uint32_t Model_LodSetup_Addr[] = { 0x846260, 0x83DBB0, 0x86CF90 };
-fn_0args Model_LodSetup_Orig;
-void* Model_LodSetup_Hook()
+fn_0args ModelManager__Update_Orig;
+void* ModelManager__Update_Hook()
 {
   if (!CheckFlag(DBGRAPHIC_FLAG::DBGRAPHIC_HIGH_LOD_FIXED))
-    return Model_LodSetup_Orig();
+    return ModelManager__Update_Orig();
 
   // Model_LodSetup_Orig checks value of STA flags, and if set it does what we need for DBGRAPHIC_HIGH_LOD_FIXED
   // so we'll temporarily set the flag for that fn to read
@@ -246,7 +247,7 @@ void* Model_LodSetup_Hook()
 
   auto origSTA = *STA;
   *STA |= 0x40000000;
-  auto ret = Model_LodSetup_Orig();
+  auto ret = ModelManager__Update_Orig();
   *STA = origSTA;
 
   return ret;
@@ -308,10 +309,10 @@ void Rebug_Init()
 
   if (Settings.DebugLog)
   {
-    dlog(" SoftFilteredModels: loaded %d filters\n", numSoft);
-    dlog(" HardFilteredModels: loaded %d filters\n", numHard);
+    dlog(" SoftFilteredModels: %d filters\n", numSoft);
+    dlog(" HardFilteredModels: %d filters\n", numHard);
   }
 
   MH_CreateHook((LPVOID)(mBaseAddress + Model_ShouldBeCulled_Addr[version]), Model_ShouldBeCulled_Hook, (LPVOID*)&Model_ShouldBeCulled_Orig);
-  MH_CreateHook((LPVOID)(mBaseAddress + Model_LodSetup_Addr[version]), Model_LodSetup_Hook, (LPVOID*)&Model_LodSetup_Orig);
+  MH_CreateHook((LPVOID)(mBaseAddress + ModelManager__Update_Addr[version]), ModelManager__Update_Hook, (LPVOID*)&ModelManager__Update_Orig);
 }

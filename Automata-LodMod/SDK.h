@@ -5,10 +5,12 @@
 // Just felt it was worth documenting the other structs that use the same BinaryXML stuff cShadowParam used :)
 // (these same BinaryXML structs show up in a few PlatinumGames titles - maybe this can help with those too)
 
-enum GameVersion {
-  Win10 = 0,
-  Win7,
-  UWP
+enum GameVersion { // release date follows
+  Win10 = 0, // 15 July 2021
+  Win7,      // 15 July 2021
+  UWP,       // ? 2021
+  Steam2017, // 28 April 2017
+  Debug2017  // 22 March 2017
 };
 
 typedef void* (*fn_3args)(void* a1, void* a2, void* a3);

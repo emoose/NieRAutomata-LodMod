@@ -6,56 +6,60 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.74"
+#define LODMOD_VERSION "0.75"
 
-// Arrays below are [Win10 exe, Win7 exe, UWP/MSStore exe]
+const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
 // Address of PE header timestamp, so we can check what EXE is being used
-const uint32_t TimestampAddr[] = { 0x178, 0x1A8, 0x180 };
-const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254 };
+const uint32_t TimestampAddr[] = { 0x178, 0x1A8, 0x180, 0xD8, 0xE0 };
+const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254, 1493111701, 1490166596 };
 
 // Addresses of game functions/vars
-const uint32_t GetSaveFolder_Addr[] = { 0x7A5790, 0x79D570, 0x7CB040 };
+const uint32_t GetSaveFolder_Addr[] = { 0x7A5790, 0x79D570, 0x7CB040, 0x0, 0x88DB10 }; // inlined in Steam/2017 ;_;
 
-const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90 };
-const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990, 0x873DA0 };
+const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90, 0x627DE0, 0x9D7B80 };
+const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990, 0x873DA0, 0x627F50, 0x9D7F00 };
 
-const uint32_t Setting_AOEnabled_Addr[] = { 0x1421F58, 0x1414E48, 0x14A4B08 };
+const uint32_t Setting_AOEnabled_Addr[] = { 0x1421F58, 0x1414E48, 0x14A4B08, 0x0, 0x0 };
 
-const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0, 0x79A620 };
+const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0, 0x79A620, 0x0, 0x85C230 }; // inlined in Steam/2017
 
-const uint32_t cBinaryXml__Read_Addr[] = { 0x14C700, 0x14C530, 0x14C860 };
+const uint32_t cBinaryXml__Read_Addr[] = { 0x14C700, 0x14C530, 0x14C860, 0x816880, 0xC5C130 };
 
-const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70, 0x78E8A0 };
+const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70, 0x78E8A0, 0x5513C0, 0x848D30 };
 
-const uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354, 0x780E84 };
+const uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354, 0x780E84, 0x53A576, 0x835C0F };
 
-const uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695, 0x78E1C5 };
-const uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B, 0x78E1CB };
-const uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7, 0x78E1E7 };
-const uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD, 0x78E1ED };
+const uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695, 0x78E1C5, 0x52FAD3, 0x8474A5 };
+const uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B, 0x78E1CB, 0x52FADB, 0x8474AB };
+const uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7, 0x78E1E7, 0x52FAEB, 0x8474C7 };
+const uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD, 0x78E1ED, 0x52FAF3, 0x8474CD };
 
-const uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7, 0x78DFF7 };
-const uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD, 0x78DFFD };
-const uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9, 0x78E019 };
-const uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F };
+const uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7, 0x78DFF7, 0x52F3C9, 0x8471F7 };
+const uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD, 0x78DFFD, 0x52F3D1, 0x8471FD };
+const uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9, 0x78E019, 0x52F3E1, 0x847219 };
+const uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F, 0x52F3E9, 0x84721F };
+// addt patches for Steam/2017
+const uint32_t ShadowBufferSizePatch5Addr2[] = { 0, 0, 0, 0x52F412, 0 };
+const uint32_t ShadowBufferSizePatch6Addr2[] = { 0, 0, 0, 0x52F41A, 0 };
 
-const uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421 };
+
+const uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421, 0x53BC53, 0x837A28 };
 
 // For validating that game set ShadowBuffSizeBits to what we wanted...
-const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4 };
+const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4, 0x10517BC, 0x1F4A8A8 };
 
 // SAO CreateTextureBuffer call hooks:
-const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870 };
-const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2 };
+const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870, 0x0, 0xE75EA0 };
+const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2, 0x0, 0xE76313 };
 
 const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A };
 const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46 };
 const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4 };
 
 // Others
-const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058 };
-const uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC };
+const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058, 0x53B1DB, 0x836904 };
+const uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC, 0x53C206, 0x837E74 };
 
 // Configurables
 LodModSettings Settings = {
@@ -79,6 +83,84 @@ LodModSettings Settings = {
 // Calculated stuff
 int version = 0; // which GameVersion we're injected into
 int ExpectedShadowBuffSizeBits = 1; // to check against ShadowBuffSizeBits_Addr
+
+void UpdateShadowResolution(int resolution)
+{
+  // game uses shifts by 0xB/0xA of a value patched below to determine resolution used to setup shadow texture buffers
+  // normally is always set to 1 (so 1 << 0xB / 2048), but there does seem to be some resolution checks nearby that can change it to 4 (8192)
+  // that only seems to be for 4k resolutions though, and is maybe incomplete since shadow quadrant sizes don't get updated for it, leaving the increased resolution space unused(?)
+  int value = resolution >> 0xB; 
+
+  // shadows can't go any lower than 2048
+  if (value <= 0)
+    return;
+
+  uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
+  *(uint32_t*)(&ShadowQualityPatch[1]) = value;
+  SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version], ShadowQualityPatch, 6);
+
+  // Patch out the 3840x2160/3200x1800 ShadowQuality = 4 code
+  if (version == GameVersion::Steam2017)
+  {
+    uint8_t MovR8dEcx[] = { 0x41, 0x89, 0xC8, 0x90, 0x90, 0x90 };
+    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovR8dEcx, 6);
+  }
+  else if (version == GameVersion::Debug2017)
+  {
+    uint8_t MovEdxEcx[] = { 0x89, 0xCA, 0x90, 0x90, 0x90 };
+    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovEdxEcx, 5);
+  }
+  else
+  {
+    uint8_t MovEaxEcx[] = { 0x89, 0xC8, 0x90, 0x90, 0x90 };
+    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovEaxEcx, 5);
+  }
+
+  ExpectedShadowBuffSizeBits = value;
+
+  // Size of each quadrant in shadowmap
+  int shadowQuadSize = resolution / 2;
+
+  dlog("Shadow quadrant size: %d\n", shadowQuadSize);
+
+  dlog("ShadowBuffSizeBits: %d\n", ExpectedShadowBuffSizeBits);
+
+  // Poor mans lzcnt...
+  int tempSize = shadowQuadSize;
+  int shadowNumBits = 0;
+  while (tempSize)
+  {
+    tempSize /= 2;
+    shadowNumBits++;
+  }
+  shadowNumBits--;
+
+  dlog("ShadowResNumBits: %d\n", shadowNumBits);
+
+  // Update shadow quadrant sizes
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[version], uint32_t(shadowQuadSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[version], uint32_t(shadowQuadSize));
+
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[version], uint8_t(shadowNumBits));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[version], uint32_t(shadowQuadSize));
+  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[version], uint32_t(shadowQuadSize));
+
+  // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
+  SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version], uint32_t(shadowQuadSize));
+  if (version == GameVersion::Steam2017)
+  {
+    // special case for inlined CreateTextureBuffer
+    SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version] + 7, uint32_t(shadowQuadSize));
+
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch5Addr2[version], uint32_t(shadowQuadSize));
+    SafeWrite(mBaseAddress + ShadowBufferSizePatch6Addr2[version], uint32_t(shadowQuadSize));
+  }
+
+  dlog("Shadow resolution patched to %dx%d.\n", resolution, resolution);
+}
 
 typedef void* (*cBinaryXml__Read_Fn)(struct cBinaryXml* thisptr, uint32_t a2, cObject* output);
 cBinaryXml__Read_Fn cBinaryXml__Read_Orig;
@@ -107,6 +189,11 @@ void* cBinaryXml__Read_Hook(struct cBinaryXml* thisptr, uint32_t a2, cObject* ou
       dlog("This will likely mean shadow resolution won't be updated properly, probably resulting in strange artifacts!\n");
       dlog("(this might be caused by LodMod being injected into the game _after_ shadow-init code has been ran - maybe try a different inject method)\n");
       dlog("If using SpecialK's Import feature to load in LodMod maybe using 'When=Lazy' can help.\n\n");
+
+      // Revert shadow resolution changes, since the updated shadow-quadrant code will mess up shadows in this state
+      // (even though this state is mostly caused by user-error, it's probably not a good idea for LM to break games in any case)
+      dlog("Reverting shadow resolution to game default:\n");
+      UpdateShadowResolution(ShadowBuffSizeBits << 0xB);
     }
 
     CheckedShadowBuffSizeBits = true;
@@ -238,6 +325,9 @@ uint32_t IsAOAllowed_Hook(void* a1)
   if (!IsAOAllowed_Orig(a1))
     return false;
 
+  if (!Setting_AOEnabled_Addr[version])
+    return true;
+
   auto result = *(uint32_t*)(mBaseAddress + Setting_AOEnabled_Addr[version]) != 0;
   return result;
 }
@@ -247,15 +337,15 @@ CreateTextureBuffer_Fn CreateTextureBuffer_Orig;
 
 void* AO_CreateTextureBuffer_Hook(void* texture, uint32_t width, uint32_t height, void* a4, void* a5, void* a6, void* a7, void* a8, void* a9, void* a10, void* a11, void* a12)
 {
-  float width_new = (float)width * Settings.AOMultiplierWidth;
-  float height_new = (float)height * Settings.AOMultiplierHeight;
+  uint32_t width_new = (uint32_t)((float)width * Settings.AOMultiplierWidth);
+  uint32_t height_new = (uint32_t)((float)height * Settings.AOMultiplierHeight);
 
   // This hook is only called 3 times, so lets log it if we can
 
   if (Settings.DebugLog)
-    dlog("AO_CreateTextureBuffer_Hook(%dx%d) - setting resolution %dx%d (will be scaled with game render resolution)\n", width, height, (uint32_t)width_new, (uint32_t)height_new);
+    dlog("AO_CreateTextureBuffer_Hook(%dx%d) - setting resolution %dx%d (will be scaled with game render resolution)\n", width, height, width_new, height_new);
 
-  return CreateTextureBuffer_Orig(texture, (uint32_t)width_new, (uint32_t)height_new, a4, a5, a6, a7, a8, a9, a10, a11, a12);
+  return CreateTextureBuffer_Orig(texture, width_new, height_new, a4, a5, a6, a7, a8, a9, a10, a11, a12);
 }
 
 void PatchCall(uintptr_t callAddr, uintptr_t callDest)
@@ -282,16 +372,24 @@ void LodMod_Init()
   injected = true;
 
   version = GameVersion::Win10;
-  if (*(uint32_t*)(mBaseAddress + TimestampAddr[0]) != Timestamp[0])
+  if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
   {
     version = GameVersion::Win7;
-    if (*(uint32_t*)(mBaseAddress + TimestampAddr[1]) != Timestamp[1])
+    if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
     {
       version = GameVersion::UWP;
-      if (*(uint32_t*)(mBaseAddress + TimestampAddr[2]) != Timestamp[2])
+      if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
       {
-        // wrong EXE?
-        return;
+        version = GameVersion::Steam2017;
+        if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+        {
+          version = GameVersion::Debug2017;
+          if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+          {
+            // wrong EXE?
+            return;
+          }
+        }
       }
     }
   }
@@ -304,7 +402,8 @@ void LodMod_Init()
     MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[version]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
   }
 
-  MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
+  if(IsAOAllowedAddr[version] != 0)
+    MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
   MH_CreateHook((LPVOID)(mBaseAddress + cBinaryXml__Read_Addr[version]), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
 
 #ifdef _DEBUG
@@ -317,89 +416,43 @@ void LodMod_Init()
 
   MH_EnableHook(MH_ALL_HOOKS);
 
-  if (Settings.AOMultiplierWidth != 1 || Settings.AOMultiplierHeight != 1)
+  // Old versions use different form of AO, current code doesn't touch it
+  if (version != GameVersion::Steam2017 && version != GameVersion::Debug2017)
   {
-    CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[version]);
+    if (Settings.AOMultiplierWidth != 1 || Settings.AOMultiplierHeight != 1)
+    {
+      CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[version]);
 
-    // Have to write a trampoline somewhere within 2GiB of the hooked call, needs 12 bytes...
-    uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xE0 };
+      // Have to write a trampoline somewhere within 2GiB of the hooked call, needs 12 bytes...
+      uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xE0 };
 
-    *(uintptr_t*)&trampoline[2] = (uintptr_t)&AO_CreateTextureBuffer_Hook;
+      *(uintptr_t*)&trampoline[2] = (uintptr_t)&AO_CreateTextureBuffer_Hook;
 
-    SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[version], trampoline, 12);
+      SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[version], trampoline, 12);
 
-    // Hook SAO-related CreateTextureBuffer calls to call the trampoline we patched in
+      // Hook SAO-related CreateTextureBuffer calls to call the trampoline we patched in
 
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+      PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+      PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+      PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+    }
   }
 
-  dlog("Hooks complete!\n");
+  dlog("\nHooks complete!\n");
 
   if (Settings.CommunicationScreenResolution != 256)
   {
     SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version], Settings.CommunicationScreenResolution);
     SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version], Settings.CommunicationScreenResolution);
-  }
-
-  // Shadow quality patch:
-  // 
-  // Code at this address sets a global var that's used to size different buffers based on it
-  // Seems to always be set to 1 normally, but the code around it seems to be checking game render resolution
-  // and sets it to 4 depending on some unknown resolution being detected, guess it was left incomplete?
-  // (update: seems its maybe set to 4 for 3840x2160 & 3200x1800, but I'm not sure how that would even work without the "Update shadow quadrant sizes" stuff below...)
-  // Buffer size = value << 0xB
-  int value = Settings.ShadowResolution >> 11;
-
-  // shadows can't go any lower than 2048
-  if (value > 0)
-  {
-    dlog("\nPatching shadow buffer code...\n");
-    uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
-    *(uint32_t*)(&ShadowQualityPatch[1]) = value;
-    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version], ShadowQualityPatch, 6);
-
-    // Patch out the 3840x2160/3200x1800 ShadowQuality = 4 code
-    uint8_t MovEaxEcx[] = { 0x89, 0xC8, 0x90, 0x90, 0x90 };
-    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovEaxEcx, 5);
-
-    ExpectedShadowBuffSizeBits = value;
-
-    // Size of each quadrant in shadowmap
-    int shadowQuadSize = Settings.ShadowResolution / 2;
-
-    dlog("Shadow quadrant size: %d\n", shadowQuadSize);
-
-    dlog("ShadowBuffSizeBits: %d\n", ExpectedShadowBuffSizeBits);
-
-    // Poor mans lzcnt...
-    int tempSize = shadowQuadSize;
-    int shadowNumBits = 0;
-    while (tempSize)
+    if (version == GameVersion::Steam2017)
     {
-      tempSize /= 2;
-      shadowNumBits++;
+      // special case for inlined CreateTextureBuffer
+      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version] + 7, Settings.CommunicationScreenResolution);
+      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version] + 7, Settings.CommunicationScreenResolution);
     }
-    shadowNumBits--;
-
-    dlog("ShadowResNumBits: %d\n", shadowNumBits);
-
-    // Update shadow quadrant sizes
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[version], uint8_t(shadowNumBits));
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[version], uint8_t(shadowNumBits));
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[version], uint32_t(shadowQuadSize));
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[version], uint32_t(shadowQuadSize));
-
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[version], uint8_t(shadowNumBits));
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[version], uint8_t(shadowNumBits));
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[version], uint32_t(shadowQuadSize));
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[version], uint32_t(shadowQuadSize));
-
-    // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
-    SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version], uint32_t(shadowQuadSize));
   }
 
+  UpdateShadowResolution(Settings.ShadowResolution);
   dlog("\nLodMod init complete!\n\n");
 }
 
@@ -427,12 +480,15 @@ void Settings_ReadINI()
     // Win7/Win10: Documents\My Games\NieR_Automata
     // UWP: Documents\My Games\NieR_Automata_PC
 
-    typedef BOOL(*GetSaveFolder_Fn)(char* DstBuf, size_t SizeInBytes);
-    GetSaveFolder_Fn GetSaveFolder_Orig = (GetSaveFolder_Fn)(mBaseAddress + GetSaveFolder_Addr[version]);
-    if (GetSaveFolder_Orig(IniPathA, 4096))
+    if (GetSaveFolder_Addr[version] != 0)
     {
-      swprintf_s(IniPath, L"%SLodMod.ini", IniPathA);
-      swprintf_s(IniDir, L"%S", IniPathA);
+      typedef BOOL(*GetSaveFolder_Fn)(char* DstBuf, size_t SizeInBytes);
+      GetSaveFolder_Fn GetSaveFolder_Orig = (GetSaveFolder_Fn)(mBaseAddress + GetSaveFolder_Addr[version]);
+      if (GetSaveFolder_Orig(IniPathA, 4096))
+      {
+        swprintf_s(IniPath, L"%SLodMod.ini", IniPathA);
+        swprintf_s(IniDir, L"%S", IniPathA);
+      }
     }
   }
 
@@ -457,6 +513,7 @@ void Settings_ReadINI()
   Settings.DisableManualCulling = INI_GetBool(IniPath, L"LodMod", L"DisableManualCulling", false);
   Settings.CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", 256, IniPath);
   Settings.HQMapSlots = GetPrivateProfileIntW(L"LodMod", L"HQMapSlots", 7, IniPath);
+
   // Old INI keynames...
   {
     if (INI_GetBool(IniPath, L"LodMod", L"DisableLODs", false))
@@ -491,7 +548,7 @@ void Settings_ReadINI()
     dlog("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
     if (GetModuleName(DllHModule, ModuleName, 4096))
       dlog("LodMod module name: %S\n", ModuleName);
-    dlog("Detected game type: %s\n", version == GameVersion::Win10 ? "Steam/Win10" : (version == GameVersion::Win7 ? "Steam/Win7" : "UWP/MS Store"));
+    dlog("Detected game type: %s\n", GameVersionName[version]);
     dlog("Wrapping DLL from %S\n", wcslen(origModulePath) > 0 ? origModulePath : L"system folder");
     dlog("Loaded INI from %S\n\nSettings:\n", IniPath);
     dlog(" LODMultiplier: %f\n", Settings.LODMultiplier);
