@@ -53,9 +53,9 @@ const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4, 0x105
 const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870, 0x0, 0xE75EA0 };
 const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2, 0x0, 0xE76313 };
 
-const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A };
-const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46 };
-const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4 };
+const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A, 0x0, 0x837462 };
+const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46, 0x0, 0x8374CA };
+const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4, 0x0, 0x837502 };
 
 // Others
 const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058, 0x53B1DB, 0x836904 };
@@ -417,7 +417,7 @@ void LodMod_Init()
   MH_EnableHook(MH_ALL_HOOKS);
 
   // Old versions use different form of AO, current code doesn't touch it
-  if (version != GameVersion::Steam2017 && version != GameVersion::Debug2017)
+  if (version != GameVersion::Steam2017)
   {
     if (Settings.AOMultiplierWidth != 1 || Settings.AOMultiplierHeight != 1)
     {
