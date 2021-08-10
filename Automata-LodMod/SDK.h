@@ -98,32 +98,44 @@ public:
 
   void DisableLODs()
   {
-    // Set all DistRates to 0
-    if (DistRates)
-    {
-      memset(DistRates, 0, sizeof(float) * 4);
-    }
+    // Debug build adds 0x30 bytes to class members somewhere, it's before the ones we touch though, so just add 0x30 if needed
+    int members_offset = version == GameVersion::Debug2017 ? 0x30 : 0;
 
+    float* distRates = *(float**)(((uint8_t*)&DistRates) + members_offset);
+    // Set all DistRates to 0
+    if (distRates)
+      memset(distRates, 0, sizeof(float) * 4);
+
+    uint32_t* numDistRates = (uint32_t*)(((uint8_t*)&NumDistRates) + members_offset);
     // Set number of DistRates to 1 (0 causes weird issues)
-    NumDistRates = 1;
+    *numDistRates = 1;
 
     // Disable UseLostLOD
-    Unk400 = 0;
-    Unk404 = 0;
+    uint32_t* unk400 = (uint32_t*)(((uint8_t*)&Unk400) + members_offset);
+    uint32_t* unk404 = (uint32_t*)(((uint8_t*)&Unk404) + members_offset);
+    *unk400 = 0;
+    *unk404 = 0;
 
     // Remove UseCullAABB flag
-    Unk520 &= 0xFFFFFFEF;
+    uint32_t* unk520 = (uint32_t*)(((uint8_t*)&Unk520) + members_offset);
+    *unk520 &= 0xFFFFFFEF;
   }
 
   void MultiplyLODs(float multiplier)
   {
-    if (!DistRates || multiplier <= 0)
+    // Debug build adds 0x30 bytes to class members somewhere, it's before the ones we touch though, so just add 0x30 if needed
+    int members_offset = version == GameVersion::Debug2017 ? 0x30 : 0;
+
+    float* distRates = *(float**)(((uint8_t*)&DistRates) + members_offset);
+    if (!distRates || multiplier <= 0)
       return;
 
-    for (uint32_t i = 0; i < NumDistRates; i++)
+    uint32_t numDistRates = *(uint32_t*)(((uint8_t*)&NumDistRates) + members_offset);
+
+    for (uint32_t i = 0; i < numDistRates; i++)
     {
       // DistRate needs to be made smaller to go further, idk how it works exactly
-      DistRates[i] /= multiplier;
+      distRates[i] /= multiplier;
     }
   }
 };
