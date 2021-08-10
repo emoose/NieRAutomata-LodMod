@@ -50,12 +50,12 @@ const uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421, 0x53
 const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4, 0x10517BC, 0x1F4A8A8 };
 
 // SAO CreateTextureBuffer call hooks:
-const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870, 0x0, 0xE75EA0 };
-const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2, 0x0, 0xE76313 };
+const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870, 0x9348F0, 0xE75EA0 };
+const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2, 0x53EE71, 0xE76313 };
 
-const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A, 0x0, 0x837462 };
-const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46, 0x0, 0x8374CA };
-const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4, 0x0, 0x837502 };
+const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A, 0x53B56A, 0x837462 };
+const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46, 0x53B5D0, 0x8374CA };
+const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4, 0x53B620, 0x837502 };
 
 // Others
 const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058, 0x53B1DB, 0x836904 };
@@ -348,6 +348,39 @@ void* AO_CreateTextureBuffer_Hook(void* texture, uint32_t width, uint32_t height
   return CreateTextureBuffer_Orig(texture, width_new, height_new, a4, a5, a6, a7, a8, a9, a10, a11, a12);
 }
 
+#pragma pack(push, 1)
+struct cCreateTextureInfo
+{
+  /* 0x00 */ uint64_t unk0;
+  /* 0x08 */ uint32_t width;
+  /* 0x0C */ uint32_t height;
+  /* 0x10 */ uint32_t unk10;
+  /* 0x14 */ uint64_t unk14;
+};
+static_assert(sizeof(cCreateTextureInfo) == 0x1C);
+#pragma pack(pop)
+
+typedef void* (*CreateTextureBuffer_Fn_2017)(void* unk, void* texture, cCreateTextureInfo* texture_info);
+// Steam2017 inlined the actual AO_CreateTextureBuffer code, so we have to hook the function call that'd normally be inside CreateTextureBuffer
+// (after width/height/etc have been set up in a struct)
+void* AO_CreateTextureBuffer_Hook_2017(void* unk, void* texture, cCreateTextureInfo* texture_info)
+{
+  uint32_t width_new = (uint32_t)((float)texture_info->width * Settings.AOMultiplierWidth);
+  uint32_t height_new = (uint32_t)((float)texture_info->height * Settings.AOMultiplierHeight);
+
+  // This hook is only called 3 times, so lets log it if we can
+
+  if (Settings.DebugLog)
+    dlog("AO_CreateTextureBuffer_Hook_2017(%dx%d) - setting resolution %dx%d (will be scaled with game render resolution)\n", texture_info->width, texture_info->height, width_new, height_new);
+
+  texture_info->width = width_new;
+  texture_info->height = height_new;
+
+  CreateTextureBuffer_Fn_2017 origFn = (CreateTextureBuffer_Fn_2017)CreateTextureBuffer_Orig;
+
+  return origFn(unk, texture, texture_info);
+}
+
 void PatchCall(uintptr_t callAddr, uintptr_t callDest)
 {
   uint8_t callBuf[] = { 0xE8, 0x00, 0x00, 0x00, 0x00 };
@@ -404,6 +437,7 @@ void LodMod_Init()
 
   if(IsAOAllowedAddr[version] != 0)
     MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
+
   MH_CreateHook((LPVOID)(mBaseAddress + cBinaryXml__Read_Addr[version]), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
 
 #ifdef _DEBUG
@@ -416,26 +450,25 @@ void LodMod_Init()
 
   MH_EnableHook(MH_ALL_HOOKS);
 
-  // Old versions use different form of AO, current code doesn't touch it
-  if (version != GameVersion::Steam2017)
+  if (Settings.AOMultiplierWidth != 1 || Settings.AOMultiplierHeight != 1)
   {
-    if (Settings.AOMultiplierWidth != 1 || Settings.AOMultiplierHeight != 1)
-    {
-      CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[version]);
+    CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[version]);
 
-      // Have to write a trampoline somewhere within 2GiB of the hooked call, needs 12 bytes...
-      uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xE0 };
+    // Have to write a trampoline somewhere within 2GiB of the hooked call, needs 12 bytes...
+    uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xE0 };
 
+    if(version != GameVersion::Steam2017)
       *(uintptr_t*)&trampoline[2] = (uintptr_t)&AO_CreateTextureBuffer_Hook;
+    else
+      *(uintptr_t*)&trampoline[2] = (uintptr_t)&AO_CreateTextureBuffer_Hook_2017;
 
-      SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[version], trampoline, 12);
+    SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[version], trampoline, 12);
 
-      // Hook SAO-related CreateTextureBuffer calls to call the trampoline we patched in
+    // Hook SAO-related CreateTextureBuffer calls to call the trampoline we patched in
 
-      PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
-      PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
-      PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
-    }
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+    PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
   }
 
   dlog("\nHooks complete!\n");
