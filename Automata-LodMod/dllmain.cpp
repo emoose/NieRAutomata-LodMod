@@ -33,6 +33,8 @@ LodModSettings Settings = {
   .ShadowFilterStrengthBias = 0,
   .ShadowFilterStrengthMinimum = 0,
   .ShadowFilterStrengthMaximum = 0,
+  .ShadowModelHQ = false,
+  .ShadowModelForceAll = false,
   .CommunicationScreenResolution = 256,
   .HQMapSlots = 7,
   .WrapperLoadLibrary = { 0 }
@@ -123,6 +125,8 @@ void Settings_ReadINI()
   Settings.DisableManualCulling = INI_GetBool(IniPath, L"LodMod", L"DisableManualCulling", false);
   Settings.CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", 256, IniPath);
   Settings.HQMapSlots = GetPrivateProfileIntW(L"LodMod", L"HQMapSlots", 7, IniPath);
+  Settings.ShadowModelHQ = INI_GetBool(IniPath, L"LodMod", L"ShadowModelHQ", false);
+  Settings.ShadowModelForceAll = INI_GetBool(IniPath, L"LodMod", L"ShadowModelForceAll", false);
 
   // Old INI keynames...
   {

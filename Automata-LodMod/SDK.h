@@ -61,13 +61,31 @@ struct cVec3
 };
 static_assert(sizeof(cVec3<float>) == 0xC);
 
+struct ShadowListEntry
+{
+  /* 0x000 */ uint64_t vftable;
+  /* 0x008 */ uint8_t Unk8[0x308];
+  /* 0x310 */ uint32_t Flags;
+  /* 0x314 */ uint32_t Unk314;
+};
+static_assert(sizeof(ShadowListEntry) == 0x318);
+
+struct cShadowList
+{
+  /* 0x00 */ uint64_t vftable;
+  /* 0x08 */ uint8_t Unk8[0x18];
+  /* 0x20 */ ShadowListEntry* Entries;
+  /* 0x28 */ uint32_t EntryCount;
+};
+static_assert(sizeof(cShadowList) == 0x2C);
+
 class BehaviorScr // name from game EXE
 {
   virtual ~BehaviorScr() = 0; // for vftable
 public:
   /* 0x008 */ uint8_t Unk0[0x388];
-  /* 0x390 */ void* ShadowArray; // some kind of array/vector related with shadows, "ShadowCast" flag affects something in the entries
-  /* 0x398 */ uint8_t Unk398[0x58];
+  /* 0x390 */ cShadowList ShadowList; // some kind of array/vector related with shadows, "ShadowCast" flag affects something in the entries
+  /* 0x3BC */ uint8_t Unk3BC[0x34];
   /* 0x3F0 */ float* DistRates; // pointer to "DistRate0"-"DistRate3"
   /* 0x3F8 */ uint32_t NumDistRates;
   /* 0x3FC */ float Unk3FC;
@@ -88,13 +106,38 @@ public:
   /* 0x590 */ uint8_t Unk590[0x58];
   /* 0x5E8 */ float BloomStrength; // always 0 or 1 ?
   /* 0x5EC */ uint32_t Unk5EC;
-  /* 0x5F0 */ uint8_t Unk5F0[0x300];
+  /* 0x5F0 */ uint32_t Unk5F0;
+  /* 0x5F4 */ uint32_t Unk5F4;
+  /* 0x5F8 */ uint32_t Unk5F8;
+  /* 0x5FC */ uint32_t Unk5FC;
+
+  /* 0x600 */ uint8_t Unk600[0x2F0];
 
   // other possible fields:
   // - EV_LIGHT_NO (NA debug exe)
   // - NoBackCull (vanquish 2010)
   // - ShadowLOD (vanquish 2010)
   // - LostDistRate (vanquish 2010)
+
+  void SetCastShadows(bool castsShadows)
+  {
+    // Debug build adds 0x30 bytes to class members somewhere, it's before the ones we touch though, so just add 0x30 if needed
+    int members_offset = version == GameVersion::Debug2017 ? 0x30 : 0;
+
+    cShadowList* shadowList = (cShadowList*)(((uint8_t*)&this->ShadowList) + members_offset);
+    if (!shadowList->EntryCount)
+      return;
+
+    for (int i = 0; i < shadowList->EntryCount; i++)
+    {
+      auto flags = shadowList->Entries[i].Flags;
+      if (castsShadows)
+        flags = flags | 1;
+      else
+        flags = flags & ~1;
+      shadowList->Entries[i].Flags = flags;
+    }
+  }
 
   void DisableLODs()
   {

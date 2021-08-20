@@ -51,6 +51,8 @@ struct LodModSettings
   float ShadowFilterStrengthBias;
   float ShadowFilterStrengthMinimum;
   float ShadowFilterStrengthMaximum;
+  bool ShadowModelHQ;
+  bool ShadowModelForceAll;
   int CommunicationScreenResolution;
   int HQMapSlots;
   WCHAR WrapperLoadLibrary[4096];
