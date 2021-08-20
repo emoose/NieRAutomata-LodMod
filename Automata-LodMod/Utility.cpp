@@ -1,6 +1,4 @@
 #include "pch.h"
-#include <sstream>
-#include <fstream>
 
 bool INI_GetBool(const WCHAR* IniPath, const WCHAR* Section, const WCHAR* Key, bool DefaultValue)
 {

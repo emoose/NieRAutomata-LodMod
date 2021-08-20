@@ -1,6 +1,4 @@
 #include "pch.h"
-#include <stdlib.h>
-#include <stdio.h>
 
 #define PLUGIN_API extern "C" __declspec(dllexport)
 

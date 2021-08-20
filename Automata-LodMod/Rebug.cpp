@@ -1,26 +1,13 @@
 #include "pch.h"
 
-#include <vector>
-#include <cstdint>
-#include <string>
-#include <algorithm>
 #include "SDK.h"
 #include "MinHook/MinHook.h"
-#include <mutex>
-#include <thread>
-#include <unordered_map>
-
-#include <locale>
-#include <codecvt>
-#include <string>
 
 // Rebug: hooks to add some debug-flag checks back into functions, based on NA debug exe
 
 // Configurables:
 std::unordered_map<int, std::vector<std::string>> SoftFilteredModels;
 std::unordered_map<int, std::vector<std::string>> HardFilteredModels;
-
-// dllmain.cpp:
 
 const uint32_t Flag_DBG_Addr[] = { 0x1029840, 0x101C750, 0x10AC3E0, 0x1415B90, 0x20D9E38 };
 const uint32_t Flag_DBSTP_Addr[] = { 0x102987C, 0x101C78C, 0x10AC41C, 0x1415BCC, 0x20D9E74 };

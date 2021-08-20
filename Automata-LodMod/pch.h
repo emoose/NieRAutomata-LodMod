@@ -4,16 +4,36 @@
 // Windows Header Files
 #include <windows.h>
 
+#include <cstdint>
+#include <vector>
+#include <string>
+#include <sstream>
+#include <fstream>
+#include <filesystem>
+#include <unordered_map>
+#include <algorithm>
+#include <locale>
+#include <codecvt>
+#ifdef _DEBUG
+#include <mutex>
+#include <thread>
+#endif
+
 #include "MinHook/MinHook.h"
 
-extern uintptr_t mBaseAddress;
+extern int version;
 
 // dllmain.cpp
 extern HMODULE DllHModule;
 extern HMODULE GameHModule;
 extern uintptr_t mBaseAddress;
+
+#include "SDK.h"
+
 void LodMod_Init();
 
+void ShadowFixes_Init(); // ShadowFixes.cpp
+void AOFixes_Init(); // AOFixes.cpp
 void Rebug_Init(); // Rebug.cpp
 
 // Configurables
@@ -37,7 +57,6 @@ struct LodModSettings
 };
 extern LodModSettings Settings;
 extern uintptr_t mBaseAddress;
-extern int version;
 extern WCHAR LogPath[4096];
 extern WCHAR IniPath[4096];
 

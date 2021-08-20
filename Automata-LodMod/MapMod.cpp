@@ -319,7 +319,7 @@ void LoadListSetup_Hook(BYTE* a1)
 
 void MapMod_Init()
 {
-  if (Settings.HQMapSlots <= 7)
+  if (version != GameVersion::Win10)
     return;
 
   PrevNumLods = *(uint8_t*)(mBaseAddress + 0x7C72C7 + 2);

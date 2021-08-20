@@ -209,7 +209,8 @@
       <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"
+copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata_2017\xinput1_3.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -235,7 +236,8 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"</Command>
+      <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"
+copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata_2017\xinput1_3.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-CI|x64'">
@@ -278,6 +280,7 @@
     <ClInclude Include="SDKEnums.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AOFixes.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="MapMod.cpp" />
     <ClCompile Include="MinHook\hde\hde32.c">
@@ -300,6 +303,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Rebug.cpp" />
+    <ClCompile Include="ShadowFixes.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -14,7 +14,8 @@ enum class FLAG_CATEGORY
 };
 
 // enum names come from RTTI inside steam ver
-// value names come from debug ver
+// value names come from 2017 debug ver
+// (2021 seems to make use of some STA/GAME flags which aren't included in 2017 :()
 enum class DBG_FLAG
 {
   CAMERA_MODE = 0,

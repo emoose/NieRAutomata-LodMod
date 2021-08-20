@@ -177,6 +177,8 @@ public:
 class cShadowParam : public cObject // name from EXE
 {
 public:
+  cObject_Data* GetData() { return 0; }
+
   /* 0x008 */ uint32_t UnkDword8;
   /* 0x00C */ uint32_t UnkDwordC; // possibly "m_resolutionMode", from vanquish (2010) - unlikely though
   /* 0x010 */ float m_shadowCamOffset; // 7

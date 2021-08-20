@@ -83,6 +83,12 @@
     <ClCompile Include="MapMod.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AOFixes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ShadowFixes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="proxy.def">
