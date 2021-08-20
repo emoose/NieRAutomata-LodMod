@@ -263,8 +263,100 @@ FARPROC* GetIATPointer(void* Module, const char* LibraryName, const char* Import
   return nullptr;
 }
 
+void* ModuleSectionData(void* Module, const char* SectionName)
+{
+  auto* base = (BYTE*)Module;
+  auto* dosHeader = (IMAGE_DOS_HEADER*)base;
+  if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+    return nullptr; // invalid header :(
+
+  auto* ntHeader = (IMAGE_NT_HEADERS*)(base + dosHeader->e_lfanew);
+  if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
+    return nullptr; // invalid header :(
+
+  auto* sections = (IMAGE_SECTION_HEADER*)(&ntHeader[1]);
+
+  IMAGE_SECTION_HEADER* our_section = nullptr;
+  for (int i = 0; i < ntHeader->FileHeader.NumberOfSections; i++)
+  {
+    auto* section = &sections[i];
+    if (!strcmp((const char*)section->Name, SectionName))
+    {
+      our_section = section;
+      break;
+    }
+  }
+
+  if (!our_section)
+    return nullptr;
+
+  return base + our_section->VirtualAddress;
+}
+
+
+// Compares in-memory module against on-disk module to check if .text section has been decrypted or not
+bool Proxy_IsTextDecrypted()
+{
+  WCHAR modulePath[4096 + 1] = { 0 };
+  GetModuleFileName(GameHModule, modulePath, 4096);
+
+  FILE* file;
+  if (_wfopen_s(&file, modulePath, L"rb") != 0)
+    return false;
+
+  fseek(file, 0, SEEK_END);
+  auto size = _ftelli64(file);
+  fseek(file, 0, SEEK_SET);
+
+  auto file_buf = std::make_unique<uint8_t[]>(size);
+  fread(file_buf.get(), 1, size, file);
+
+  fclose(file);
+
+  auto* base = file_buf.get();
+  auto* dosHeader = (IMAGE_DOS_HEADER*)base;
+  if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+    return false; // invalid header :(
+
+  auto* ntHeader = (IMAGE_NT_HEADERS*)(base + dosHeader->e_lfanew);
+  if (ntHeader->Signature != IMAGE_NT_SIGNATURE)
+    return false; // invalid header :(
+
+  auto* sections = (IMAGE_SECTION_HEADER*)(&ntHeader[1]);
+
+  IMAGE_SECTION_HEADER* bind_section = nullptr;
+  IMAGE_SECTION_HEADER* text_section = nullptr;
+  for (int i = 0; i < ntHeader->FileHeader.NumberOfSections; i++)
+  {
+    auto* section = &sections[i];
+    if (!strcmp((const char*)section->Name, ".bind"))
+      bind_section = section;
+    else if (!strcmp((const char*)section->Name, ".text"))
+      text_section = section;
+  }
+
+  // If no .bind section then EXE isn't encrypted, or has been decrypted already
+  if (!bind_section)
+    return true;
+
+  if (!text_section)
+    return false;
+
+  // We have .bind - need to check whether .text was decrypted already or not
+  uint8_t* text_data_file = base + text_section->PointerToRawData;
+  uint8_t* text_data_mem = (uint8_t*)ModuleSectionData(GameHModule, ".text");
+  if (!text_data_mem)
+    return false;
+
+  return memcmp(text_data_file, text_data_mem, 0x1000);
+}
+
 void Proxy_InitSteamStub()
 {
+  // If .text is decrypted we can skip IAT hooks and just start our plugin straight away
+  if (Proxy_IsTextDecrypted())
+    LodMod_Init();
+
   // Hook the GetSystemTimeAsFileTime function, in most games this seems to be one of the first imports called once SteamStub has finished.
   bool hooked = false;
   GetSystemTimeAsFileTime_iat = (GetSystemTimeAsFileTime_ptr*)GetIATPointer(GameHModule, "KERNEL32.DLL", "GetSystemTimeAsFileTime");

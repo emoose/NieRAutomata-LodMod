@@ -46,61 +46,6 @@ WCHAR IniPath[4096];
 char IniPathA[4096];
 WCHAR LogPath[4096];
 
-bool injected = false;
-void LodMod_Init()
-{
-  if (injected)
-    return;
-
-  injected = true;
-
-  version = GameVersion::Win10;
-  if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-  {
-    version = GameVersion::Win7;
-    if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-    {
-      version = GameVersion::UWP;
-      if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-      {
-        version = GameVersion::Steam2017;
-        if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-        {
-          version = GameVersion::Debug2017;
-          if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-          {
-            // wrong EXE?
-            return;
-          }
-        }
-      }
-    }
-  }
-
-  MH_Initialize();
-
-  ShadowFixes_Init();
-  AOFixes_Init();
-  Rebug_Init();
-  MapMod_Init();
-
-  MH_EnableHook(MH_ALL_HOOKS);
-
-  if (Settings.CommunicationScreenResolution != 256)
-  {
-    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version], Settings.CommunicationScreenResolution);
-    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version], Settings.CommunicationScreenResolution);
-    if (version == GameVersion::Steam2017)
-    {
-      // special case for inlined CreateTextureBuffer
-      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version] + 7, Settings.CommunicationScreenResolution);
-      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version] + 7, Settings.CommunicationScreenResolution);
-    }
-  }
-
-  dlog("\nLodMod init complete!\n\n");
-}
-
 #ifdef _DEBUG
 HANDLE hIniUpdateThread;
 DWORD dwIniUpdateThread;
@@ -242,6 +187,63 @@ void Settings_ReadINI()
 #endif
 }
 
+bool injected = false;
+void LodMod_Init()
+{
+  if (injected)
+    return;
+
+  injected = true;
+
+  Settings_ReadINI();
+
+  version = GameVersion::Win10;
+  if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+  {
+    version = GameVersion::Win7;
+    if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+    {
+      version = GameVersion::UWP;
+      if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+      {
+        version = GameVersion::Steam2017;
+        if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+        {
+          version = GameVersion::Debug2017;
+          if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+          {
+            // wrong EXE?
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  MH_Initialize();
+
+  ShadowFixes_Init();
+  AOFixes_Init();
+  Rebug_Init();
+  MapMod_Init();
+
+  MH_EnableHook(MH_ALL_HOOKS);
+
+  if (Settings.CommunicationScreenResolution != 256)
+  {
+    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version], Settings.CommunicationScreenResolution);
+    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version], Settings.CommunicationScreenResolution);
+    if (version == GameVersion::Steam2017)
+    {
+      // special case for inlined CreateTextureBuffer
+      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version] + 7, Settings.CommunicationScreenResolution);
+      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version] + 7, Settings.CommunicationScreenResolution);
+    }
+  }
+
+  dlog("\nLodMod init complete!\n\n");
+}
+
 void InitPlugin()
 {
   printf("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
@@ -252,8 +254,6 @@ void InitPlugin()
     return;
 
   mBaseAddress = reinterpret_cast<uintptr_t>(GameHModule);
-
-  Settings_ReadINI();
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule,
