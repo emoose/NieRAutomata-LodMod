@@ -355,7 +355,10 @@ void Proxy_InitSteamStub()
 {
   // If .text is decrypted we can skip IAT hooks and just start our plugin straight away
   if (Proxy_IsTextDecrypted())
+  {
     LodMod_Init();
+    return;
+  }
 
   // Hook the GetSystemTimeAsFileTime function, in most games this seems to be one of the first imports called once SteamStub has finished.
   bool hooked = false;
