@@ -19,9 +19,9 @@ const uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F, 0
 const uint32_t ShadowBufferSizePatch5Addr2[] = { 0, 0, 0, 0x52F412, 0 };
 const uint32_t ShadowBufferSizePatch6Addr2[] = { 0, 0, 0, 0x52F41A, 0 };
 
-const uint32_t ShadowLODPatch1Addr[] = { 0x847EDA, 0, 0, 0, 0x9CD8B6 };
-const uint32_t ShadowLODPatch2Addr[] = { 0x847EF9, 0, 0, 0, 0x9CD8D5 };
-const uint32_t ShadowModel_DisableLQPatch1_Addr[] = { 0x847E0D, 0, 0, 0, 0x9CD830 };
+const uint32_t ShadowModel_HQPatch1Addr[] = { 0x847EDA, 0x83F82A, 0x86EC0A, 0x61AC7D, 0x9CD8B6 };
+const uint32_t ShadowModel_HQPatch2Addr[] = { 0x847EF9, 0x83F849, 0x86EC29, 0x61AC9C, 0x9CD8D5 };
+const uint32_t ShadowModel_DisableLQPatch1_Addr[] = { 0x847E0D, 0x83F75D, 0x86EB3D, 0x61AB83, 0x9CD830 };
 
 const uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421, 0x53BC53, 0x837A28 };
 
@@ -249,21 +249,22 @@ void ShadowFixes_Init()
   MH_CreateHook((LPVOID)(mBaseAddress + cBinaryXml__Read_Addr[version]), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
 
 #ifdef _DEBUG
-  MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[version]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
+  if(version != GameVersion::Steam2017) // ShadowDistanceReader func is weird in steam2017
+    MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[version]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
 #endif
 
   UpdateShadowResolution(Settings.ShadowResolution);
 
-  if (Settings.ShadowModelHQ && ShadowLODPatch1Addr[version] != 0)
+  if (Settings.ShadowModelHQ && ShadowModel_HQPatch1Addr[version] != 0)
   {
     // Patch out checks inside cModelShaderModule, so more models can cast shadows
     // (not totally sure what the code this patches is checking, either something to do with LOD level, or maybe a "this->ShadowsDisabled" check of some kind)
-    SafeWrite(mBaseAddress + ShadowLODPatch1Addr[version], (uint16_t)0x9090);
+    SafeWrite(mBaseAddress + ShadowModel_HQPatch1Addr[version], (uint16_t)0x9090);
 
     // Patching this seems to allow moving objects like trees to cast updated shadows (from swaying around)
     // Unfortunately the shadow-LOD version of these objects will also still get rendered
     // The patch after this one should help with that though
-    SafeWrite(mBaseAddress + ShadowLODPatch2Addr[version], (uint16_t)0x9090);
+    SafeWrite(mBaseAddress + ShadowModel_HQPatch2Addr[version], (uint16_t)0x9090);
 
     // Disable LQ shadow model from being rendered, since we're now using HQ version above
     SafeWrite(mBaseAddress + ShadowModel_DisableLQPatch1_Addr[version], (uint16_t)(0xE990));
