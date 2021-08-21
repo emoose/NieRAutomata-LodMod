@@ -255,15 +255,17 @@ void ShadowFixes_Init()
 
   UpdateShadowResolution(Settings.ShadowResolution);
 
-  if (Settings.ShadowModelHQ && ShadowModel_HQPatch1Addr[version] != 0)
+  if (Settings.ShadowModelForceAll)
   {
-    // Patch out checks inside cModelShaderModule, so more models can cast shadows
+    // Patch out checks inside cModelShaderModule so more models can cast shadows
     // (not totally sure what the code this patches is checking, either something to do with LOD level, or maybe a "this->ShadowsDisabled" check of some kind)
     SafeWrite(mBaseAddress + ShadowModel_HQPatch1Addr[version], (uint16_t)0x9090);
+  }
 
+  if (Settings.ShadowModelHQ)
+  {
     // Patching this seems to allow moving objects like trees to cast updated shadows (from swaying around)
-    // Unfortunately the shadow-LOD version of these objects will also still get rendered
-    // The patch after this one should help with that though
+    // Unfortunately the shadow-LOD version of these objects will also still get rendered, so we need the patch after this to disable those
     SafeWrite(mBaseAddress + ShadowModel_HQPatch2Addr[version], (uint16_t)0x9090);
 
     // Disable LQ shadow model from being rendered, since we're now using HQ version above
