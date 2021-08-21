@@ -319,6 +319,51 @@ void LoadListSetup_Hook(BYTE* a1)
 
 void MapMod_Init()
 {
+  if (version == GameVersion::Steam2017)
+  {
+    // Expand buffers in 2017 to match 2021, allows using 2021 data files with 2017 EXE
+    // (recommend grabbing shader.dat from 2017 data000.cpk & ui folder from 2017 data009.cpk, else you'll encounter some weirdness!)
+    // (extract shader.dat into games data\ folder, and extract ui folder to data\ui\)
+    // (note that CriPakTools doesn't fully extract data009.cpk, use cpk.bms instead)
+    const uint32_t new_GraphicWork = 0x6400000;
+    const uint32_t new_ShaderFile = 0x500000;
+    const uint32_t new_UIVram = 0x6000000;
+
+    uint32_t size_WorkRoot = *(uint32_t*)(mBaseAddress + 0x6441F3 + 2);
+    uint32_t size_WorkRoot_GraphicWork = *(uint32_t*)(mBaseAddress + 0x64430C + 2);
+    if (new_GraphicWork > size_WorkRoot_GraphicWork)
+    {
+      auto tweak_GraphicWork = new_GraphicWork - size_WorkRoot_GraphicWork;
+      size_WorkRoot += tweak_GraphicWork;
+      size_WorkRoot_GraphicWork += tweak_GraphicWork;
+
+      SafeWrite(mBaseAddress + 0x6441F3 + 2, size_WorkRoot);
+      SafeWrite(mBaseAddress + 0x64430C + 2, size_WorkRoot_GraphicWork);
+    }
+
+    uint32_t size_FileRoot = *(uint32_t*)(mBaseAddress + 0x64427D + 2);
+    uint32_t size_FileRoot_ShaderFile = *(uint32_t*)(mBaseAddress + 0x644786 + 2);
+    if (new_ShaderFile > size_FileRoot_ShaderFile)
+    {
+      auto tweak_ShaderFile = new_ShaderFile - size_FileRoot_ShaderFile;
+      size_FileRoot += tweak_ShaderFile;
+      size_FileRoot_ShaderFile += tweak_ShaderFile;
+      SafeWrite(mBaseAddress + 0x64427D + 2, size_FileRoot);
+      SafeWrite(mBaseAddress + 0x644786 + 2, size_FileRoot_ShaderFile);
+    }
+
+    uint32_t size_TextureRoot = *(uint32_t*)(mBaseAddress + 0x6442A5 + 2);
+    uint32_t size_TextureRoot_UIVram = *(uint32_t*)(mBaseAddress + 0x644A8A + 2);
+    if (new_UIVram > size_TextureRoot_UIVram)
+    {
+      auto tweak_UIVram = new_UIVram - size_TextureRoot_UIVram;
+      size_TextureRoot += tweak_UIVram;
+      size_TextureRoot_UIVram += tweak_UIVram;
+      SafeWrite(mBaseAddress + 0x6442A5 + 2, size_TextureRoot);
+      SafeWrite(mBaseAddress + 0x644A8A + 2, size_TextureRoot_UIVram);
+    }
+  }
+
   if (version != GameVersion::Win10)
     return;
 
