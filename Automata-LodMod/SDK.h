@@ -70,21 +70,70 @@ struct ShadowListEntry
 };
 static_assert(sizeof(ShadowListEntry) == 0x318);
 
-struct cShadowList
+struct ShadowListEntry_Model
 {
-  /* 0x00 */ uint64_t vftable;
-  /* 0x08 */ uint8_t Unk8[0x18];
-  /* 0x20 */ ShadowListEntry* Entries;
-  /* 0x28 */ uint32_t EntryCount;
+  uint8_t Unk0[0x40];
+  const char* ModelName;
+  uint8_t Unk48[0x28];
+  // debug build adds 0x10 bytes...
 };
-static_assert(sizeof(cShadowList) == 0x2C);
+static_assert(sizeof(ShadowListEntry_Model) == 0x70);
+
+struct cModel_UnkStruct8_UnkStructA0_ShadowModelPair
+{
+  int32_t Unk0;
+  int32_t ModelIndex;
+  int32_t ShadowModelIndex;
+  uint32_t UnkC;
+  uint32_t Unk10;
+  uint32_t Unk14;
+};
+static_assert(sizeof(cModel_UnkStruct8_UnkStructA0_ShadowModelPair) == 0x18);
+
+struct cModel_UnkStruct8_UnkStructA0
+{
+  /* 0x00 */ uint8_t Unk0[0x10];
+  /* 0x10 */ cModel_UnkStruct8_UnkStructA0_ShadowModelPair* ShadowModelPairs;
+  /* 0x18 */ uint32_t NumShadowModelPairs;
+  /* 0x1C */ uint32_t Unk1C;
+};
+static_assert(sizeof(cModel_UnkStruct8_UnkStructA0) == 0x20);
+
+struct cModel_UnkStruct8
+{
+  /* 0x00 */ uint8_t Unk0[0xA0];
+  /* 0xA0 */ cModel_UnkStruct8_UnkStructA0* UnkA0;
+  /* 0xA8 */ int32_t NumUnkA0;
+};
+
+struct cModel
+{
+  /* 0x00 / 0x390 */ uint64_t vftable;
+  /* 0x08 / 0x398 */ cModel_UnkStruct8* Unk8;
+  /* 0x10 / 0x3A0 */ ShadowListEntry_Model* ModelEntries;
+  /* 0x18 / 0x3A8 */ int32_t ModelEntryCount;
+  /* 0x1C / 0x3AC */ uint32_t Unk1C;
+  /* 0x20 / 0x3B0 */ ShadowListEntry* Entries;
+  /* 0x28 / 0x3B8 */ uint32_t EntryCount;
+};
+static_assert(sizeof(cModel) == 0x2C); // actually a LOT bigger, most of BehaviorScr should be in here
+
+struct BehaviorScr_ModelEntry
+{
+  /* 0x00 */ int32_t AreaIdIndex; // index into some array inside BehaviorScr
+  /* 0x04 */ int32_t Unk4;
+  /* 0x08 */ char* ModelName;
+  /* 0x10 */ int32_t Unk10;
+  /* 0x14 */ int32_t Unk14;
+};
+static_assert(sizeof(BehaviorScr_ModelEntry) == 0x18); // correct size
 
 class BehaviorScr // name from game EXE
 {
   virtual ~BehaviorScr() = 0; // for vftable
 public:
   /* 0x008 */ uint8_t Unk0[0x388];
-  /* 0x390 */ cShadowList ShadowList; // some kind of array/vector related with shadows, "ShadowCast" flag affects something in the entries
+  /* 0x390 */ cModel ModelInfo; // some kind of array/vector related with shadows, "ShadowCast" flag affects something in the entries
   /* 0x3BC */ uint8_t Unk3BC[0x34];
   /* 0x3F0 */ float* DistRates; // pointer to "DistRate0"-"DistRate3"
   /* 0x3F8 */ uint32_t NumDistRates;
@@ -111,7 +160,16 @@ public:
   /* 0x5F8 */ uint32_t Unk5F8;
   /* 0x5FC */ uint32_t Unk5FC;
 
-  /* 0x600 */ uint8_t Unk600[0x2F0];
+  /* 0x600 */ uint8_t Unk600[0x68];
+  /* 0x668 */ int32_t AreaId;
+  /* 0x66C */ uint32_t Unk66C;
+  /* 0x670 */ uint8_t Unk670[0x260];
+
+  /* 0x8D0 */ BehaviorScr_ModelEntry* LoadedModels; // after they've been loaded/inited? not sure
+  /* 0x8D8 */ int32_t NumLoadedModels;
+
+  /* 0x8DC */ int32_t Unk8DC;
+  /* 0x8E0 */ uint8_t Unk8E0[0x10];
 
   // other possible fields:
   // - EV_LIGHT_NO (NA debug exe)
@@ -124,7 +182,7 @@ public:
     // Debug build adds 0x30 bytes to class members somewhere, it's before the ones we touch though, so just add 0x30 if needed
     int members_offset = version == GameVersion::Debug2017 ? 0x30 : 0;
 
-    cShadowList* shadowList = (cShadowList*)(((uint8_t*)&this->ShadowList) + members_offset);
+    auto* shadowList = (cModel*)(((uint8_t*)&this->ModelInfo) + members_offset);
     if (!shadowList->EntryCount)
       return;
 
@@ -136,6 +194,50 @@ public:
       else
         flags = flags & ~1;
       shadowList->Entries[i].Flags = flags;
+    }
+
+    if (!castsShadows)
+      return;
+
+    int areaid_offset = version == GameVersion::Debug2017 ? 0x40 : 0;
+    int32_t areaId = *(int32_t*)(((uint8_t*)&this->AreaId) + areaid_offset);
+
+    // Make sure we don't enable ShadowCast on "ENKEI" model
+    // Otherwise shadow covers almost entire city ruins area in route C...
+    // TODO: need to find some faster way to skip past non-enkei models, can we find area-id like LOD filter does?
+    if (areaId == -1)
+    {
+      // Loop through the Model/ShadowModel pairs, check if any should be filtered
+      if (shadowList->Unk8 && shadowList->Unk8->NumUnkA0)
+      {
+        for (int i = 0; i < shadowList->Unk8->NumUnkA0; i++)
+        {
+          auto* unkA0 = &shadowList->Unk8->UnkA0[i];
+          if (unkA0 && unkA0->NumShadowModelPairs)
+          {
+            for (int y = 0; y < unkA0->NumShadowModelPairs; y++)
+            {
+              auto* pair = &unkA0->ShadowModelPairs[y];
+              if (pair->ModelIndex == -1 || pair->ShadowModelIndex == -1)
+                continue;
+              if (pair->ModelIndex >= shadowList->ModelEntryCount)
+                continue;
+
+              auto* model = &shadowList->ModelEntries[pair->ModelIndex];
+              auto* modelName = &model->ModelName;
+
+              // debug2017 build adds 0x10 bytes to ModelEntry struct, so add that offset to our ptr...
+              if (version == GameVersion::Debug2017)
+                modelName = (const char**)((uint8_t*)modelName + (pair->ModelIndex * 0x10));
+
+              auto* shadowInfo = &shadowList->Entries[pair->ShadowModelIndex];
+
+              if (!strcmp(*modelName, "ENKEI"))
+                shadowInfo->Flags &= ~1;
+            }
+          }
+        }
+      }
     }
   }
 
