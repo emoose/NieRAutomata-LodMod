@@ -4,7 +4,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.76.1"
+#define LODMOD_VERSION "0.76.2"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
@@ -232,6 +232,14 @@ void LodMod_Init()
   MapMod_Init();
 
   MH_EnableHook(MH_ALL_HOOKS);
+
+  // Change SystemData.dat filename in the 2017 builds, since it seems to be slightly different format to 2021
+  // (switching between 2017/2021 builds usually ends up changing settings due to these format differences...)
+  char s2017[] = "2017";
+  if (version == GameVersion::Steam2017)
+    SafeWrite(mBaseAddress + 0xEA1CB0 + 8, s2017, 4);
+  else if (version == GameVersion::Debug2017)
+    SafeWrite(mBaseAddress + 0x1AB8F30 + 8, s2017, 4);
 
   if (Settings.CommunicationScreenResolution != 256)
   {

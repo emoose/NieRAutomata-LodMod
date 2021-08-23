@@ -1,7 +1,6 @@
 #include "pch.h"
 
 const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90, 0x627DE0, 0x9D7B80 };
-const uint32_t LodHook2Addr[] = { 0x84D070, 0x844990, 0x873DA0, 0x627F50, 0x9D7F00 };
 
 const uint32_t Setting_AOEnabled_Addr[] = { 0x1421F58, 0x1414E48, 0x14A4B08, 0x0, 0x0 };
 
@@ -20,36 +19,10 @@ sub_84CD60_Fn sub_84CD60_Orig;
 void* sub_84CD60_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
   // In case something in orig function depends on LOD details, disable them first
-  if (Settings.ShadowModelForceAll)
-    thisptr->SetCastShadows(true);
-
   if (Settings.LODMultiplier <= 0)
     thisptr->DisableLODs();
 
   auto ret = sub_84CD60_Orig(thisptr, a2, a3, a4, a5, a6, a7, a8);
-
-  if (Settings.LODMultiplier > 0)
-    thisptr->MultiplyLODs(Settings.LODMultiplier);
-  else
-    thisptr->DisableLODs();
-
-  if (Settings.ShadowModelForceAll)
-    thisptr->SetCastShadows(true);
-
-  return ret;
-}
-
-sub_84CD60_Fn sub_84D070_Orig;
-void* sub_84D070_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
-{
-  // In case something in orig function depends on LOD details, disable them first
-  if (Settings.ShadowModelForceAll)
-    thisptr->SetCastShadows(true);
-
-  if (Settings.LODMultiplier <= 0)
-    thisptr->DisableLODs();
-
-  auto ret = sub_84D070_Orig(thisptr, a2, a3, a4, a5, a6, a7, a8);
 
   if (Settings.LODMultiplier > 0)
     thisptr->MultiplyLODs(Settings.LODMultiplier);
@@ -143,10 +116,7 @@ void PatchCall(uintptr_t callAddr, uintptr_t callDest)
 void AOFixes_Init()
 {
   if (Settings.LODMultiplier != 1 || Settings.ShadowModelForceAll)
-  {
     MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[version]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
-    MH_CreateHook((LPVOID)(mBaseAddress + LodHook2Addr[version]), sub_84D070_Hook, (LPVOID*)&sub_84D070_Orig);
-  }
 
   if (IsAOAllowedAddr[version] != 0)
     MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);

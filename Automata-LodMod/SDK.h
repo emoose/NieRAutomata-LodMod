@@ -94,7 +94,7 @@ struct cModel_UnkStruct8_UnkStructA0
 {
   /* 0x00 */ uint8_t Unk0[0x10];
   /* 0x10 */ cModel_UnkStruct8_UnkStructA0_ShadowModelPair* ShadowModelPairs;
-  /* 0x18 */ uint32_t NumShadowModelPairs;
+  /* 0x18 */ int32_t NumShadowModelPairs;
   /* 0x1C */ uint32_t Unk1C;
 };
 static_assert(sizeof(cModel_UnkStruct8_UnkStructA0) == 0x20);
@@ -114,7 +114,7 @@ struct cModel
   /* 0x18 / 0x3A8 */ int32_t ModelEntryCount;
   /* 0x1C / 0x3AC */ uint32_t Unk1C;
   /* 0x20 / 0x3B0 */ ShadowListEntry* Entries;
-  /* 0x28 / 0x3B8 */ uint32_t EntryCount;
+  /* 0x28 / 0x3B8 */ int32_t EntryCount;
 };
 static_assert(sizeof(cModel) == 0x2C); // actually a LOT bigger, most of BehaviorScr should be in here
 
