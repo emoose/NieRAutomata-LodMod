@@ -12,10 +12,7 @@ const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "
 const uint32_t TimestampAddr[] = { 0x178, 0x1A8, 0x180, 0xD8, 0xE0 };
 const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254, 1493111701, 1490166596 };
 
-// Addresses of game functions/vars
-const uint32_t GetSaveFolder_Addr[] = { 0x7A5790, 0x79D570, 0x7CB040, 0x0, 0x88DB10 }; // inlined in Steam/2017 ;_;
-
-// Others
+// Addresses of misc things to patch
 const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058, 0x53B1DB, 0x836904 };
 const uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC, 0x53C206, 0x837E74 };
 
@@ -48,7 +45,6 @@ int version = 0; // which GameVersion we're injected into
 WCHAR ModuleName[4096];
 WCHAR IniDir[4096];
 WCHAR IniPath[4096];
-char IniPathA[4096];
 WCHAR LogPath[4096];
 
 #ifdef _DEBUG
@@ -69,6 +65,17 @@ DWORD WINAPI IniUpdateThread(LPVOID lpParam)
   }
 }
 #endif
+
+// Reimpl of games save folder func (0x7A5790 in win10), using unicode instead of ascii
+bool GetSaveFolder(wchar_t* destBuf, size_t sizeInBytes)
+{
+  WCHAR pszPath[4096];
+  auto result = SHGetSpecialFolderPathW(0, pszPath, CSIDL_PERSONAL, 0);
+  if (result)
+    swprintf_s(destBuf, sizeInBytes, L"%s\\%s\\%s\\", pszPath, L"My Games", version == GameVersion::UWP ? L"NieR_Automata_PC" : L"NieR_Automata");
+
+  return result;
+}
 
 void Settings_ReadINI()
 {
@@ -94,17 +101,8 @@ void Settings_ReadINI()
     // Win7/Win10: Documents\My Games\NieR_Automata
     // UWP: Documents\My Games\NieR_Automata_PC
     
-    // TODO: Steam2017 inlined the GetSaveFolder func, so this needs a reimpl...
-    if (GetSaveFolder_Addr[version] != 0)
-    {
-      typedef BOOL(*GetSaveFolder_Fn)(char* DstBuf, size_t SizeInBytes);
-      GetSaveFolder_Fn GetSaveFolder_Orig = (GetSaveFolder_Fn)(mBaseAddress + GetSaveFolder_Addr[version]);
-      if (GetSaveFolder_Orig(IniPathA, 4096))
-      {
-        swprintf_s(IniPath, L"%SLodMod.ini", IniPathA);
-        swprintf_s(IniDir, L"%S", IniPathA);
-      }
-    }
+    if (GetSaveFolder(IniDir, 4096))
+      swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
   }
 
   if (!FileExists(IniPath))
@@ -202,31 +200,6 @@ void LodMod_Init()
 
   injected = true;
 
-  Settings_ReadINI();
-
-  version = GameVersion::Win10;
-  if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-  {
-    version = GameVersion::Win7;
-    if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-    {
-      version = GameVersion::UWP;
-      if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-      {
-        version = GameVersion::Steam2017;
-        if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-        {
-          version = GameVersion::Debug2017;
-          if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-          {
-            // wrong EXE?
-            return;
-          }
-        }
-      }
-    }
-  }
-
   MH_Initialize();
 
   ShadowFixes_Init();
@@ -267,16 +240,45 @@ void LodMod_Init()
   dlog("\nLodMod init complete!\n\n");
 }
 
-void InitPlugin()
+bool InitPlugin()
 {
   printf("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
   if (!GameHModule)
-    return;
+    return false;
 
   mBaseAddress = reinterpret_cast<uintptr_t>(GameHModule);
+
+
+
+  version = GameVersion::Win10;
+  if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+  {
+    version = GameVersion::Win7;
+    if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+    {
+      version = GameVersion::UWP;
+      if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+      {
+        version = GameVersion::Steam2017;
+        if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+        {
+          version = GameVersion::Debug2017;
+          if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+          {
+            // wrong EXE?
+            return false;
+          }
+        }
+      }
+    }
+  }
+
+  Settings_ReadINI();
+
+  return true;
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule,
@@ -289,9 +291,9 @@ BOOL APIENTRY DllMain( HMODULE hModule,
   case DLL_PROCESS_ATTACH:
     DllHModule = hModule;
 
-    InitPlugin();
+    if(InitPlugin())
+      Proxy_InitSteamStub();
 
-    Proxy_InitSteamStub();
     Proxy_Attach();
 
     break;
