@@ -24,9 +24,9 @@ void* sub_84CD60_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* 
 
   auto ret = sub_84CD60_Orig(thisptr, a2, a3, a4, a5, a6, a7, a8);
 
-  if (Settings.LODMultiplier > 0)
+  if (Settings.LODMultiplier > 0 && Settings.LODMultiplier != 1)
     thisptr->MultiplyLODs(Settings.LODMultiplier);
-  else
+  else if (Settings.LODMultiplier == 0)
     thisptr->DisableLODs();
 
   if (Settings.ShadowModelForceAll)

@@ -397,8 +397,6 @@ WCHAR origModulePath[4096];
 
 bool Proxy_Attach()
 {
-  Proxy_InitSteamStub();
-
   WCHAR modulePath[MAX_PATH] = { 0 };
   WCHAR* modulePathPtr = modulePath;
 

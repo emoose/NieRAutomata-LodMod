@@ -19,6 +19,9 @@ const uint32_t GetSaveFolder_Addr[] = { 0x7A5790, 0x79D570, 0x7CB040, 0x0, 0x88D
 const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058, 0x53B1DB, 0x836904 };
 const uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC, 0x53C206, 0x837E74 };
 
+const uint32_t DlcCheckPatch1_Addr[] = { 0x28207C, 0x27C5FC, 0, 0x510958F, 0x410AD8F };
+const uint32_t DlcCheckPatch2_Addr[] = { 0x282099, 0x27C619, 0, 0x51095AC, 0x410ADAC };
+
 // Configurables
 LodModSettings Settings = {
   .DebugLog = false,
@@ -241,6 +244,14 @@ void LodMod_Init()
   else if (version == GameVersion::Debug2017)
     SafeWrite(mBaseAddress + 0x1AB8F30 + 8, s2017, 4);
 
+  // 2021 update moved DLC into main depot, skip steam checks since it's always available now
+  // Steam checks will interfere if you disable the DLC depots in steam (DLC depots still contain 2017 files, need to disable them to make sure they don't overwrite 2021)
+  // Game itself will check for file availability after this, so no worries
+  if (DlcCheckPatch1_Addr[version])
+    SafeWrite(mBaseAddress + DlcCheckPatch1_Addr[version], uint16_t(0x9090));
+  if (DlcCheckPatch2_Addr[version])
+    SafeWrite(mBaseAddress + DlcCheckPatch2_Addr[version], uint16_t(0x9090));
+
   if (Settings.CommunicationScreenResolution != 256)
   {
     SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version], Settings.CommunicationScreenResolution);
@@ -280,6 +291,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
     InitPlugin();
 
+    Proxy_InitSteamStub();
     Proxy_Attach();
 
     break;
