@@ -22,14 +22,39 @@
 
 #include "MinHook/MinHook.h"
 
-extern int version;
+#include "SDK.h"
 
 // dllmain.cpp
 extern HMODULE DllHModule;
 extern HMODULE GameHModule;
 extern uintptr_t mBaseAddress;
 
-#include "SDK.h"
+inline uintptr_t GameAddress(const uint32_t* addr)
+{
+  if (!addr[int(version)])
+    return 0;
+  return mBaseAddress + addr[int(version)];
+}
+
+inline uintptr_t GameAddress(uint32_t addr)
+{
+  return mBaseAddress + addr;
+}
+
+template <typename T>
+inline T GameAddress(const uint32_t* addr)
+{
+  if (!addr[int(version)])
+    return 0;
+  return reinterpret_cast<T>(mBaseAddress + addr[int(version)]);
+}
+
+template <typename T>
+inline T GameAddress(uint32_t addr)
+{
+  return reinterpret_cast<T>(mBaseAddress + addr);
+}
+
 
 void LodMod_Init();
 

@@ -42,10 +42,10 @@ uint32_t IsAOAllowed_Hook(void* a1)
   if (!IsAOAllowed_Orig(a1))
     return false;
 
-  if (!Setting_AOEnabled_Addr[version])
+  if (!GameAddress(Setting_AOEnabled_Addr))
     return true;
 
-  auto result = *(uint32_t*)(mBaseAddress + Setting_AOEnabled_Addr[version]) != 0;
+  auto result = *GameAddress<uint32_t*>(Setting_AOEnabled_Addr) != 0;
   return result;
 }
 
@@ -58,8 +58,8 @@ void* AO_CreateTextureBuffer_Hook(void* texture, uint32_t width, uint32_t height
   // 2021 format is R8_UNORM (9)
   // changing this sadly makes no difference though ;-;
 
-  uint32_t width_new = (uint32_t)((float)width * Settings.AOMultiplierWidth);
-  uint32_t height_new = (uint32_t)((float)height * Settings.AOMultiplierHeight);
+  uint32_t width_new = uint32_t(float(width) * Settings.AOMultiplierWidth);
+  uint32_t height_new = uint32_t(float(height) * Settings.AOMultiplierHeight);
 
   // This hook is only called 3 times, so lets log it if we can
 
@@ -88,8 +88,8 @@ typedef void* (*CreateTextureBuffer_Fn_2017)(void* unk, void* texture, cCreateTe
 // (after width/height/etc have been set up in a struct)
 void* AO_CreateTextureBuffer_Hook_2017(void* unk, void* texture, cCreateTextureInfo* texture_info)
 {
-  uint32_t width_new = (uint32_t)((float)texture_info->width * Settings.AOMultiplierWidth);
-  uint32_t height_new = (uint32_t)((float)texture_info->height * Settings.AOMultiplierHeight);
+  uint32_t width_new = uint32_t(float(texture_info->width) * Settings.AOMultiplierWidth);
+  uint32_t height_new = uint32_t(float(texture_info->height) * Settings.AOMultiplierHeight);
 
   // This hook is only called 3 times, so lets log it if we can
 
@@ -116,14 +116,14 @@ void PatchCall(uintptr_t callAddr, uintptr_t callDest)
 void AOFixes_Init()
 {
   if (Settings.LODMultiplier != 1 || Settings.ShadowModelForceAll)
-    MH_CreateHook((LPVOID)(mBaseAddress + LodHook1Addr[version]), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
+    MH_CreateHook(GameAddress<LPVOID>(LodHook1Addr), sub_84CD60_Hook, (LPVOID*)&sub_84CD60_Orig);
 
-  if (IsAOAllowedAddr[version] != 0)
-    MH_CreateHook((LPVOID)(mBaseAddress + IsAOAllowedAddr[version]), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
+  if (GameAddress(IsAOAllowedAddr) != 0)
+    MH_CreateHook(GameAddress<LPVOID>(IsAOAllowedAddr), IsAOAllowed_Hook, (LPVOID*)&IsAOAllowed_Orig);
 
   if (Settings.AOMultiplierWidth != 1 || Settings.AOMultiplierHeight != 1)
   {
-    CreateTextureBuffer_Orig = (CreateTextureBuffer_Fn)(mBaseAddress + CreateTextureBuffer_Addr[version]);
+    CreateTextureBuffer_Orig = GameAddress<CreateTextureBuffer_Fn>(CreateTextureBuffer_Addr);
 
     // Have to write a trampoline somewhere near the hooked addr, needs 12 bytes...
     uint8_t trampoline[] = { 0x48, 0xB8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xFF, 0xE0 };
@@ -133,12 +133,12 @@ void AOFixes_Init()
     else
       *(uintptr_t*)&trampoline[2] = (uintptr_t)&AO_CreateTextureBuffer_Hook_2017;
 
-    SafeWrite(mBaseAddress + CreateTextureBuffer_TrampolineAddr[version], trampoline, 12);
+    SafeWrite(GameAddress(CreateTextureBuffer_TrampolineAddr), trampoline, 12);
 
     // Hook SAO-related CreateTextureBuffer calls to call the trampoline we patched in
 
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall1_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall2_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
-    PatchCall(mBaseAddress + AO_CreateTextureBufferCall3_Addr[version], mBaseAddress + CreateTextureBuffer_TrampolineAddr[version]);
+    PatchCall(GameAddress(AO_CreateTextureBufferCall1_Addr), GameAddress(CreateTextureBuffer_TrampolineAddr));
+    PatchCall(GameAddress(AO_CreateTextureBufferCall2_Addr), GameAddress(CreateTextureBuffer_TrampolineAddr));
+    PatchCall(GameAddress(AO_CreateTextureBufferCall3_Addr), GameAddress(CreateTextureBuffer_TrampolineAddr));
   }
 }

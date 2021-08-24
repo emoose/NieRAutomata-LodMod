@@ -4,7 +4,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.76.2"
+#define LODMOD_VERSION "0.76.3"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
@@ -40,7 +40,7 @@ LodModSettings Settings = {
   .WrapperLoadLibrary = { 0 }
 };
 
-int version = 0; // which GameVersion we're injected into
+GameVersion version; // which GameVersion we're injected into
 
 WCHAR ModuleName[4096];
 WCHAR IniDir[4096];
@@ -163,7 +163,7 @@ void Settings_ReadINI()
     dlog("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
     if (GetModuleName(DllHModule, ModuleName, 4096))
       dlog("LodMod module name: %S\n", ModuleName);
-    dlog("Detected game type: %s\n", GameVersionName[version]);
+    dlog("Detected game type: %s\n", GameVersionName[int(version)]);
     dlog("Wrapping DLL from %S\n", wcslen(origModulePath) > 0 ? origModulePath : L"system folder");
     dlog("Loaded INI from %S\n\nSettings:\n", IniPath);
     dlog(" LODMultiplier: %f\n", Settings.LODMultiplier);
@@ -213,27 +213,27 @@ void LodMod_Init()
   // (switching between 2017/2021 builds usually ends up changing settings due to these format differences...)
   char s2017[] = "2017";
   if (version == GameVersion::Steam2017)
-    SafeWrite(mBaseAddress + 0xEA1CB0 + 8, s2017, 4);
+    SafeWriteModule(0xEA1CB0 + 8, s2017, 4);
   else if (version == GameVersion::Debug2017)
-    SafeWrite(mBaseAddress + 0x1AB8F30 + 8, s2017, 4);
+    SafeWriteModule(0x1AB8F30 + 8, s2017, 4);
 
   // 2021 update moved DLC into main depot, skip steam checks since it's always available now
   // Steam checks will interfere if you disable the DLC depots in steam (DLC depots still contain 2017 files, need to disable them to make sure they don't overwrite 2021)
   // Game itself will check for file availability after this, so no worries
-  if (DlcCheckPatch1_Addr[version])
-    SafeWrite(mBaseAddress + DlcCheckPatch1_Addr[version], uint16_t(0x9090));
-  if (DlcCheckPatch2_Addr[version])
-    SafeWrite(mBaseAddress + DlcCheckPatch2_Addr[version], uint16_t(0x9090));
+  if (GameAddress(DlcCheckPatch1_Addr))
+    SafeWrite(GameAddress(DlcCheckPatch1_Addr), uint16_t(0x9090));
+  if (GameAddress(DlcCheckPatch2_Addr))
+    SafeWrite(GameAddress(DlcCheckPatch2_Addr), uint16_t(0x9090));
 
   if (Settings.CommunicationScreenResolution != 256)
   {
-    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version], Settings.CommunicationScreenResolution);
-    SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version], Settings.CommunicationScreenResolution);
+    SafeWrite(GameAddress(CommunicationScreenTexture_Init1_Addr), Settings.CommunicationScreenResolution);
+    SafeWrite(GameAddress(CommunicationScreenTexture_Init2_Addr), Settings.CommunicationScreenResolution);
     if (version == GameVersion::Steam2017)
     {
       // special case for inlined CreateTextureBuffer
-      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init1_Addr[version] + 7, Settings.CommunicationScreenResolution);
-      SafeWrite(mBaseAddress + CommunicationScreenTexture_Init2_Addr[version] + 7, Settings.CommunicationScreenResolution);
+      SafeWrite(GameAddress(CommunicationScreenTexture_Init1_Addr) + 7, Settings.CommunicationScreenResolution);
+      SafeWrite(GameAddress(CommunicationScreenTexture_Init2_Addr) + 7, Settings.CommunicationScreenResolution);
     }
   }
 
@@ -251,30 +251,21 @@ bool InitPlugin()
 
   mBaseAddress = reinterpret_cast<uintptr_t>(GameHModule);
 
-
-
-  version = GameVersion::Win10;
-  if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+  // Check if we actually support this version...
+  bool foundVersion = false;
+  for (int i = 0; i < int(GameVersion::MaxVersions); i++)
   {
-    version = GameVersion::Win7;
-    if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
+    version = GameVersion(i);
+    if (*GameAddress<uint32_t*>(TimestampAddr) == Timestamp[int(version)])
     {
-      version = GameVersion::UWP;
-      if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-      {
-        version = GameVersion::Steam2017;
-        if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-        {
-          version = GameVersion::Debug2017;
-          if (*(uint32_t*)(mBaseAddress + TimestampAddr[version]) != Timestamp[version])
-          {
-            // wrong EXE?
-            return false;
-          }
-        }
-      }
+      foundVersion = true;
+      break;
     }
   }
+
+  // wrong EXE?
+  if(!foundVersion)
+    return false;
 
   Settings_ReadINI();
 

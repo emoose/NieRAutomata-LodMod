@@ -183,8 +183,8 @@ static void GetSystemTimeAsFileTime_Hook(LPFILETIME lpSystemTimeAsFileTime)
   // call original hooked func
   GetSystemTimeAsFileTime_orig(lpSystemTimeAsFileTime);
 
-  SafeWrite((uintptr_t)GetSystemTimeAsFileTime_iat, GetSystemTimeAsFileTime_orig);
-  SafeWrite((uintptr_t)QueryPerformanceCounter_iat, QueryPerformanceCounter_orig);
+  SafeWrite(uintptr_t(GetSystemTimeAsFileTime_iat), GetSystemTimeAsFileTime_orig);
+  SafeWrite(uintptr_t(QueryPerformanceCounter_iat), QueryPerformanceCounter_orig);
 
   // run our code :)
   LodMod_Init();
@@ -193,8 +193,8 @@ static void GetSystemTimeAsFileTime_Hook(LPFILETIME lpSystemTimeAsFileTime)
 static BOOL QueryPerformanceCounter_hook(LARGE_INTEGER* lpPerformanceCount)
 {
   // patch iats back to original
-  SafeWrite((uintptr_t)GetSystemTimeAsFileTime_iat, GetSystemTimeAsFileTime_orig);
-  SafeWrite((uintptr_t)QueryPerformanceCounter_iat, QueryPerformanceCounter_orig);
+  SafeWrite(uintptr_t(GetSystemTimeAsFileTime_iat), GetSystemTimeAsFileTime_orig);
+  SafeWrite(uintptr_t(QueryPerformanceCounter_iat), QueryPerformanceCounter_orig);
 
   // run our code :)
   LodMod_Init();
@@ -368,7 +368,7 @@ void Proxy_InitSteamStub()
     // Found IAT address, hook the function to run our own code instead
 
     GetSystemTimeAsFileTime_orig = *GetSystemTimeAsFileTime_iat;
-    SafeWrite((uintptr_t)GetSystemTimeAsFileTime_iat, GetSystemTimeAsFileTime_Hook);
+    SafeWrite(uintptr_t(GetSystemTimeAsFileTime_iat), GetSystemTimeAsFileTime_Hook);
 
     hooked = true;
   }
@@ -380,7 +380,7 @@ void Proxy_InitSteamStub()
     // Found IAT address, hook the function to run our own code instead
 
     QueryPerformanceCounter_orig = *QueryPerformanceCounter_iat;
-    SafeWrite((uintptr_t)QueryPerformanceCounter_iat, QueryPerformanceCounter_hook);
+    SafeWrite(uintptr_t(QueryPerformanceCounter_iat), QueryPerformanceCounter_hook);
 
     hooked = true;
   }

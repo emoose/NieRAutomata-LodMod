@@ -30,7 +30,7 @@ uint32_t GetFlagValue(DBG_FLAG flag, uint32_t& address)
 {
   uint32_t offset = 0;
   uint32_t value = GetFlagValue(static_cast<uint32_t>(flag), offset);
-  address = Flag_DBG_Addr[version] + offset;
+  address = Flag_DBG_Addr[int(version)] + offset;
   return value;
 }
 
@@ -38,7 +38,7 @@ uint32_t GetFlagValue(DBGRAPHIC_FLAG flag, uint32_t& address)
 {
   uint32_t offset = 0;
   uint32_t value = GetFlagValue(static_cast<uint32_t>(flag), offset);
-  address = Flag_DBGRAPHIC_Addr[version] + offset;
+  address = Flag_DBGRAPHIC_Addr[int(version)] + offset;
   return value;
 }
 
@@ -47,7 +47,7 @@ bool CheckFlag(DBG_FLAG flag)
   uint32_t address = 0;
   auto rawFlag = GetFlagValue(flag, address);
 
-  return (*reinterpret_cast<uint32_t*>(mBaseAddress + address) & rawFlag) != 0;
+  return (*GameAddress<uint32_t*>(address) & rawFlag) != 0;
 }
 
 bool CheckFlag(DBGRAPHIC_FLAG flag)
@@ -55,7 +55,7 @@ bool CheckFlag(DBGRAPHIC_FLAG flag)
   uint32_t address = 0;
   auto rawFlag = GetFlagValue(flag, address);
 
-  return (*reinterpret_cast<uint32_t*>(mBaseAddress + address) & rawFlag) != 0;
+  return (*GameAddress<uint32_t*>(address) & rawFlag) != 0;
 }
 
 #ifdef _DEBUG
@@ -83,10 +83,10 @@ template <typename I> std::string n2hexstr(I w, size_t hex_len = sizeof(I) << 1)
 int GetPlayerAreaId()
 {
   // TODO: find a better method than this!
-  int* position_ptr = reinterpret_cast<int32_t*>(mBaseAddress + Global_PlayerCoords_Addr[version]);
+  auto* position_ptr = GameAddress<int32_t*>(Global_PlayerCoords_Addr);
 
-  uint32_t x_pos = (uint8_t)position_ptr[0];
-  uint32_t y_pos = (uint8_t)position_ptr[1];
+  uint32_t x_pos = uint8_t(position_ptr[0]);
+  uint32_t y_pos = uint8_t(position_ptr[1]);
 
   return (x_pos << 8) | y_pos;
 }
@@ -121,7 +121,7 @@ fn_2args Model_ShouldBeCulled_Orig;
 void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
 {
   // NA debug seems to set this value before returning...
-  *reinterpret_cast<uint32_t*>(mBaseAddress + Model_ShouldBeCulled_ValueAddr[version]) = 1;
+  *GameAddress<uint32_t*>(Model_ShouldBeCulled_ValueAddr) = 1;
 
   // Reimplement DBG_MANUAL_CULLING_DISABLE
   // TODO: there's another check for this in NA debug (0x9A42BD), might be worth reimplementing (at ~0x827C77)
@@ -230,7 +230,7 @@ void* ModelManager__Update_Hook()
   // Model_LodSetup_Orig checks value of STA flags, and if set it does what we need for DBGRAPHIC_HIGH_LOD_FIXED
   // so we'll temporarily set the flag for that fn to read
   // TODO: sadly nothing like this for LOW_LOD_FIXED to use, might need to reimpl the orig function...
-  auto* STA = reinterpret_cast<uint32_t*>(mBaseAddress + Flag_STA_Addr[version]);
+  auto* STA = GameAddress<uint32_t*>(Flag_STA_Addr);
 
   auto origSTA = *STA;
   *STA |= 0x40000000;
@@ -300,6 +300,6 @@ void Rebug_Init()
     dlog(" HardFilteredModels: %d filters\n", numHard);
   }
 
-  MH_CreateHook((LPVOID)(mBaseAddress + Model_ShouldBeCulled_Addr[version]), Model_ShouldBeCulled_Hook, (LPVOID*)&Model_ShouldBeCulled_Orig);
-  MH_CreateHook((LPVOID)(mBaseAddress + ModelManager__Update_Addr[version]), ModelManager__Update_Hook, (LPVOID*)&ModelManager__Update_Orig);
+  MH_CreateHook(GameAddress<LPVOID>(Model_ShouldBeCulled_Addr), Model_ShouldBeCulled_Hook, (LPVOID*)&Model_ShouldBeCulled_Orig);
+  MH_CreateHook(GameAddress<LPVOID>(ModelManager__Update_Addr), ModelManager__Update_Hook, (LPVOID*)&ModelManager__Update_Orig);
 }

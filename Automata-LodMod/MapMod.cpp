@@ -137,9 +137,9 @@ bool g11420IsLoaded = false;
 void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BYTE* a3)
 {
   typedef int(*GetAreaIdForCoords_Fn)(int, int, int);
-  GetAreaIdForCoords_Fn GetAreaIdForCoords = (GetAreaIdForCoords_Fn)(mBaseAddress + 0x7C2E60);
-  fn_3args Vect4Add = (fn_3args)(mBaseAddress + 0x265F00);
-  fn_2args Vect4Copy = (fn_2args)(mBaseAddress + 0x263E80);
+  GetAreaIdForCoords_Fn GetAreaIdForCoords = GameAddress<GetAreaIdForCoords_Fn>(0x7C2E60);
+  fn_3args Vect4Add = GameAddress<fn_3args>(0x265F00);
+  fn_2args Vect4Copy = GameAddress<fn_2args>(0x263E80);
 
   int prevSlotForSection[MAX_LOD_SLOTS];
   int curSlotAreaIds[MAX_LOD_SLOTS * 2];
@@ -275,16 +275,16 @@ void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, void*
 {
   if (!strcmp(heapName, "TEXTURE ROOT"))
   {
-    uint32_t aHighMapVramOld = (uint32_t)(0x6400000 * PrevNumLods);
-    uint32_t aHighMapVramNew = (uint32_t)(0x6400000 * Settings.HQMapSlots);
+    uint32_t aHighMapVramOld = uint32_t(0x6400000 * PrevNumLods);
+    uint32_t aHighMapVramNew = uint32_t(0x6400000 * Settings.HQMapSlots);
 
     heapSize -= aHighMapVramOld;
     heapSize += aHighMapVramNew;
   }
   else if (!strcmp(heapName, "FILE ROOT"))
   {
-    uint32_t aHighMapFileOld = (uint32_t)(0x1600000 * PrevNumLods);
-    uint32_t aHighMapFileNew = (uint32_t)(0x1600000 * Settings.HQMapSlots);
+    uint32_t aHighMapFileOld = uint32_t(0x1600000 * PrevNumLods);
+    uint32_t aHighMapFileNew = uint32_t(0x1600000 * Settings.HQMapSlots);
 
     heapSize -= aHighMapFileOld;
     heapSize += aHighMapFileNew;
@@ -295,7 +295,7 @@ void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, void*
 
 void LoadListSetup_Hook(BYTE* a1)
 {
-  for (int i = 0; i < (MAX_LOD_SLOTS * 2); i++)
+  for (uint64_t i = 0; i < (MAX_LOD_SLOTS * 2); i++)
   {
     if (*(DWORD*)(a1 + (i*0xC)) != 0xFFFFFFFF)
     {
@@ -329,101 +329,101 @@ void MapMod_Init()
     const uint32_t new_ShaderFile = 0x500000;
     const uint32_t new_UIVram = 0x6000000;
 
-    uint32_t size_WorkRoot = *(uint32_t*)(mBaseAddress + 0x6441F3 + 2);
-    uint32_t size_WorkRoot_GraphicWork = *(uint32_t*)(mBaseAddress + 0x64430C + 2);
+    uint32_t size_WorkRoot = *GameAddress<uint32_t*>(0x6441F3 + 2);
+    uint32_t size_WorkRoot_GraphicWork = *GameAddress<uint32_t*>(0x64430C + 2);
     if (new_GraphicWork > size_WorkRoot_GraphicWork)
     {
       auto tweak_GraphicWork = new_GraphicWork - size_WorkRoot_GraphicWork;
       size_WorkRoot += tweak_GraphicWork;
       size_WorkRoot_GraphicWork += tweak_GraphicWork;
 
-      SafeWrite(mBaseAddress + 0x6441F3 + 2, size_WorkRoot);
-      SafeWrite(mBaseAddress + 0x64430C + 2, size_WorkRoot_GraphicWork);
+      SafeWriteModule(0x6441F3 + 2, size_WorkRoot);
+      SafeWriteModule(0x64430C + 2, size_WorkRoot_GraphicWork);
     }
 
-    uint32_t size_FileRoot = *(uint32_t*)(mBaseAddress + 0x64427D + 2);
-    uint32_t size_FileRoot_ShaderFile = *(uint32_t*)(mBaseAddress + 0x644786 + 2);
+    uint32_t size_FileRoot = *GameAddress<uint32_t*>(0x64427D + 2);
+    uint32_t size_FileRoot_ShaderFile = *GameAddress<uint32_t*>(0x644786 + 2);
     if (new_ShaderFile > size_FileRoot_ShaderFile)
     {
       auto tweak_ShaderFile = new_ShaderFile - size_FileRoot_ShaderFile;
       size_FileRoot += tweak_ShaderFile;
       size_FileRoot_ShaderFile += tweak_ShaderFile;
-      SafeWrite(mBaseAddress + 0x64427D + 2, size_FileRoot);
-      SafeWrite(mBaseAddress + 0x644786 + 2, size_FileRoot_ShaderFile);
+      SafeWriteModule(0x64427D + 2, size_FileRoot);
+      SafeWriteModule(0x644786 + 2, size_FileRoot_ShaderFile);
     }
 
-    uint32_t size_TextureRoot = *(uint32_t*)(mBaseAddress + 0x6442A5 + 2);
-    uint32_t size_TextureRoot_UIVram = *(uint32_t*)(mBaseAddress + 0x644A8A + 2);
+    uint32_t size_TextureRoot = *GameAddress<uint32_t*>(0x6442A5 + 2);
+    uint32_t size_TextureRoot_UIVram = *GameAddress<uint32_t*>(0x644A8A + 2);
     if (new_UIVram > size_TextureRoot_UIVram)
     {
       auto tweak_UIVram = new_UIVram - size_TextureRoot_UIVram;
       size_TextureRoot += tweak_UIVram;
       size_TextureRoot_UIVram += tweak_UIVram;
-      SafeWrite(mBaseAddress + 0x6442A5 + 2, size_TextureRoot);
-      SafeWrite(mBaseAddress + 0x644A8A + 2, size_TextureRoot_UIVram);
+      SafeWriteModule(0x6442A5 + 2, size_TextureRoot);
+      SafeWriteModule(0x644A8A + 2, size_TextureRoot_UIVram);
     }
   }
 
   if (version != GameVersion::Win10)
     return;
 
-  PrevNumLods = *(uint8_t*)(mBaseAddress + 0x7C72C7 + 2);
+  PrevNumLods = *GameAddress<uint8_t*>(0x7C72C7 + 2);
 
   if (Settings.HQMapSlots > MAX_LOD_SLOTS)
     Settings.HQMapSlots = MAX_LOD_SLOTS;
 
   // Increase memory buffers to handle the increased LOD slots...
-  uint32_t aHighMapVramOld = (uint32_t)(0x6400000 * PrevNumLods);
-  uint32_t aHighMapVramNew = (uint32_t)(0x6400000 * Settings.HQMapSlots);
-  SafeWrite(mBaseAddress + 0x86BB38 + 1, aHighMapVramNew);
+  uint32_t aHighMapVramOld = uint32_t(0x6400000 * PrevNumLods);
+  uint32_t aHighMapVramNew = uint32_t(0x6400000 * Settings.HQMapSlots);
+  SafeWriteModule(0x86BB38 + 1, aHighMapVramNew);
 
-  uint32_t aHighMapFileOld = (uint32_t)(0x1600000 * PrevNumLods);
-  uint32_t aHighMapFileNew = (uint32_t)(0x1600000 * Settings.HQMapSlots);
-  SafeWrite(mBaseAddress + 0x86B8A1 + 1, aHighMapFileNew);
+  uint32_t aHighMapFileOld = uint32_t(0x1600000 * PrevNumLods);
+  uint32_t aHighMapFileNew = uint32_t(0x1600000 * Settings.HQMapSlots);
+  SafeWriteModule(0x86B8A1 + 1, aHighMapFileNew);
 
   // Hook root heap init func so we can increase buffers past 32-bits
-  MH_CreateHook((LPVOID)(mBaseAddress + 0x2622B0), MemorySystem__CreateRootHeap_Hook, (LPVOID*)&MemorySystem__CreateRootHeap_Orig);
+  MH_CreateHook(GameAddress<LPVOID>(0x2622B0), MemorySystem__CreateRootHeap_Hook, (LPVOID*)&MemorySystem__CreateRootHeap_Orig);
 
   // Set cHighMapController constructor to use our LOD slot count
-  SafeWrite(mBaseAddress + 0x7C72C7 + 2, (uint8_t)Settings.HQMapSlots);
+  SafeWriteModule(0x7C72C7 + 2, uint8_t(Settings.HQMapSlots));
 
   // Hook cHighMapController::UpdateSlots func to use our reimplementation instead
   // (reimplemented ver allows variable number of slots, and can read from NewSlots instead)
-  MH_CreateHook((LPVOID)(mBaseAddress + 0x815420), cHighMapController__UpdateSlots_Hook, NULL);
+  MH_CreateHook(GameAddress<LPVOID>(0x815420), cHighMapController__UpdateSlots_Hook, NULL);
 
   // Update load-list ptr to block of unused space
-  SafeWrite(mBaseAddress + 0x108734 + 3, (uint32_t)(0x114d005 + 0x5566C0));
-  SafeWrite(mBaseAddress + 0x7C2DF4 + 3, (uint32_t)(0xa92945 + 0x5566C0));
-  SafeWrite(mBaseAddress + 0x7C4A61 + 3, (uint32_t)(0xa90cd8 + 0x5566C0));
-  SafeWrite(mBaseAddress + 0x7C8141 + 3, (uint32_t)(0xa8d5f8 + 0x5566C0));
-  SafeWrite(mBaseAddress + 0x7C8548 + 3, (uint32_t)(0xa8d1f1 + 0x5566C0));
-  SafeWrite(mBaseAddress + 0x7C85E8 + 3, (uint32_t)(0xa8d151 + 0x5566C0));
-  SafeWrite(mBaseAddress + 0x7C86DB + 3, (uint32_t)(0xa8d05e + 0x5566C0));
+  SafeWriteModule(0x108734 + 3, uint32_t(0x114d005 + 0x5566C0));
+  SafeWriteModule(0x7C2DF4 + 3, uint32_t(0xa92945 + 0x5566C0));
+  SafeWriteModule(0x7C4A61 + 3, uint32_t(0xa90cd8 + 0x5566C0));
+  SafeWriteModule(0x7C8141 + 3, uint32_t(0xa8d5f8 + 0x5566C0));
+  SafeWriteModule(0x7C8548 + 3, uint32_t(0xa8d1f1 + 0x5566C0));
+  SafeWriteModule(0x7C85E8 + 3, uint32_t(0xa8d151 + 0x5566C0));
+  SafeWriteModule(0x7C86DB + 3, uint32_t(0xa8d05e + 0x5566C0));
 
   // Some code writes to an int at end of load-list, update addr/pointers of it
   uint32_t loadSlotCount = (MAX_LOD_SLOTS * 2);
   uint32_t loadSlotSize = loadSlotCount * 0xC;
-  SafeWrite(mBaseAddress + 0x7C4A6C + 3, (uint32_t)(0xa90d75 + 0x5566C0 + loadSlotSize));
-  SafeWrite(mBaseAddress + 0x7D2AD3 + 3, loadSlotSize);
-  SafeWrite(mBaseAddress + 0x8224E3 + 2, loadSlotSize);
+  SafeWriteModule(0x7C4A6C + 3, uint32_t(0xa90d75 + 0x5566C0 + loadSlotSize));
+  SafeWriteModule(0x7D2AD3 + 3, loadSlotSize);
+  SafeWriteModule(0x8224E3 + 2, loadSlotSize);
 
   // Update load-list init func to write double entry count
-  SafeWrite(mBaseAddress + 0x7D2ACA + 2, (uint8_t)(loadSlotCount));
-  SafeWrite(mBaseAddress + 0x8224DA + 2, (uint8_t)(loadSlotCount));
+  SafeWriteModule(0x7D2ACA + 2, uint8_t(loadSlotCount));
+  SafeWriteModule(0x8224DA + 2, uint8_t(loadSlotCount));
 
   // Patch load-list count checks
-  SafeWrite(mBaseAddress + 0x8317BB + 3, (uint8_t)(loadSlotCount));
-  SafeWrite(mBaseAddress + 0x8361CC + 3, (uint8_t)(loadSlotCount));
-  SafeWrite(mBaseAddress + 0x83182F + 3, (uint8_t)(loadSlotCount));
+  SafeWriteModule(0x8317BB + 3, uint8_t(loadSlotCount));
+  SafeWriteModule(0x8361CC + 3, uint8_t(loadSlotCount));
+  SafeWriteModule(0x83182F + 3, uint8_t(loadSlotCount));
 
-  MH_CreateHook((LPVOID)(mBaseAddress + 0x830D40), LoadListSetup_Hook, NULL);
+  MH_CreateHook(GameAddress<LPVOID>(0x830D40), LoadListSetup_Hook, NULL);
 
   // Uncomment this to let game set up the LOD slot coordinates
   // It does this incorrectly for the distance = 2 slots though ;_;
-  //SafeWrite(mBaseAddress + 0x7C743E + 2, (uint8_t)(NUM_SLOTS_TO_UPDATE - 1));
+  //SafeWriteModule(0x7C743E + 2, uint8_t(NUM_SLOTS_TO_UPDATE - 1));
 
   // Disable LowMapController
-  //SafeWrite(mBaseAddress + 0x7C74C2 + 1, (uint32_t)1);
-  //SafeWrite(mBaseAddress + 0x815C61 + 3, (uint8_t)0x10); // alternate
-  //SafeWrite(mBaseAddress + 0x815D20 + 3, (uint8_t)0x10); // alternate
+  //SafeWriteModule(0x7C74C2 + 1, uint32_t(1));
+  //SafeWriteModule(0x815C61 + 3, uint8_t(0x10)); // alternate
+  //SafeWriteModule(0x815D20 + 3, uint8_t(0x10)); // alternate
 }

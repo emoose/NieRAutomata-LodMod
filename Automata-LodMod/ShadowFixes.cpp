@@ -143,23 +143,23 @@ void UpdateShadowResolution(int resolution)
 
   uint8_t ShadowQualityPatch[] = { 0xB9, 0x04, 0x00, 0x00, 0x00, 0x90 };
   *(uint32_t*)(&ShadowQualityPatch[1]) = value;
-  SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version], ShadowQualityPatch, 6);
+  SafeWrite(GameAddress(ShadowQualityPatchAddr), ShadowQualityPatch, 6);
 
   // Patch out the 3840x2160/3200x1800 ShadowQuality = 4 code
   if (version == GameVersion::Steam2017)
   {
     uint8_t MovR8dEcx[] = { 0x41, 0x89, 0xC8, 0x90, 0x90, 0x90 };
-    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovR8dEcx, 6);
+    SafeWrite(GameAddress(ShadowQualityPatchAddr + 10), MovR8dEcx, 6);
   }
   else if (version == GameVersion::Debug2017)
   {
     uint8_t MovEdxEcx[] = { 0x89, 0xCA, 0x90, 0x90, 0x90 };
-    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovEdxEcx, 5);
+    SafeWrite(GameAddress(ShadowQualityPatchAddr + 10), MovEdxEcx, 5);
   }
   else
   {
     uint8_t MovEaxEcx[] = { 0x89, 0xC8, 0x90, 0x90, 0x90 };
-    SafeWrite(mBaseAddress + ShadowQualityPatchAddr[version] + 10, MovEaxEcx, 5);
+    SafeWrite(GameAddress(ShadowQualityPatchAddr + 10), MovEaxEcx, 5);
   }
 
   ExpectedShadowBuffSizeBits = value;
@@ -184,25 +184,25 @@ void UpdateShadowResolution(int resolution)
   dlog("ShadowResNumBits: %d\n", shadowNumBits);
 
   // Update shadow quadrant sizes
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr[version], uint32_t(shadowQuadSize));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr[version], uint32_t(shadowQuadSize));
+  SafeWrite(GameAddress(ShadowBufferSizePatch1Addr), uint8_t(shadowNumBits));
+  SafeWrite(GameAddress(ShadowBufferSizePatch2Addr), uint8_t(shadowNumBits));
+  SafeWrite(GameAddress(ShadowBufferSizePatch3Addr), uint32_t(shadowQuadSize));
+  SafeWrite(GameAddress(ShadowBufferSizePatch4Addr), uint32_t(shadowQuadSize));
 
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch1Addr2[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch2Addr2[version], uint8_t(shadowNumBits));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch3Addr2[version], uint32_t(shadowQuadSize));
-  SafeWrite(mBaseAddress + ShadowBufferSizePatch4Addr2[version], uint32_t(shadowQuadSize));
+  SafeWrite(GameAddress(ShadowBufferSizePatch1Addr2), uint8_t(shadowNumBits));
+  SafeWrite(GameAddress(ShadowBufferSizePatch2Addr2), uint8_t(shadowNumBits));
+  SafeWrite(GameAddress(ShadowBufferSizePatch3Addr2), uint32_t(shadowQuadSize));
+  SafeWrite(GameAddress(ShadowBufferSizePatch4Addr2), uint32_t(shadowQuadSize));
 
   // g_HalfShadowMap size needs to be half of shadow buffer size too, else god rays will break
-  SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version], uint32_t(shadowQuadSize));
+  SafeWrite(GameAddress(g_HalfShadowMap_SizeAddr), uint32_t(shadowQuadSize));
   if (version == GameVersion::Steam2017)
   {
     // special case for inlined CreateTextureBuffer
-    SafeWrite(mBaseAddress + g_HalfShadowMap_SizeAddr[version] + 7, uint32_t(shadowQuadSize));
+    SafeWrite(GameAddress(g_HalfShadowMap_SizeAddr + 7), uint32_t(shadowQuadSize));
 
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch5Addr2[version], uint32_t(shadowQuadSize));
-    SafeWrite(mBaseAddress + ShadowBufferSizePatch6Addr2[version], uint32_t(shadowQuadSize));
+    SafeWrite(GameAddress(ShadowBufferSizePatch5Addr2), uint32_t(shadowQuadSize));
+    SafeWrite(GameAddress(ShadowBufferSizePatch6Addr2), uint32_t(shadowQuadSize));
   }
 
   dlog("Shadow resolution patched to %dx%d.\n", resolution, resolution);
@@ -215,7 +215,7 @@ void UpdateShadowParams(cShadowParam* shadowParam)
   // If it's not, that likely means we were injected into the game after the shadow-init code has been ran....
   if (!CheckedShadowBuffSizeBits && Settings.DebugLog && ExpectedShadowBuffSizeBits > 0)
   {
-    auto ShadowBuffSizeBits = *(uint32_t*)(mBaseAddress + ShadowBuffSizeBits_Addr[version]);
+    auto ShadowBuffSizeBits = *GameAddress<uint32_t*>(ShadowBuffSizeBits_Addr);
     dlog("ShadowDistanceReader_Hook: ShadowBuffSizeBits = %d, ExpectedShadowBuffSizeBits = %d\n", ShadowBuffSizeBits, ExpectedShadowBuffSizeBits);
     if (ExpectedShadowBuffSizeBits != ShadowBuffSizeBits)
     {
@@ -333,10 +333,10 @@ void* ShadowDistanceReader_Hook(cShadowParam* thisptr, void* a2, void* a3, void*
     g_curShadowParam = thisptr;
 
   // Restore original shadow params if we have them, else make a copy of them
-  if (origShadowParams.count((uintptr_t)thisptr))
-    *thisptr = origShadowParams[(uintptr_t)thisptr];
+  if (origShadowParams.count(uintptr_t(thisptr)))
+    *thisptr = origShadowParams[uintptr_t(thisptr)];
   else
-    origShadowParams[(uintptr_t)thisptr] = *thisptr;
+    origShadowParams[uintptr_t(thisptr)] = *thisptr;
 
   UpdateShadowParams(thisptr);
 
@@ -346,11 +346,11 @@ void* ShadowDistanceReader_Hook(cShadowParam* thisptr, void* a2, void* a3, void*
 
 void ShadowFixes_Init()
 {
-  MH_CreateHook((LPVOID)(mBaseAddress + cBinaryXml__Read_Addr[version]), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
+  MH_CreateHook(GameAddress<LPVOID>(cBinaryXml__Read_Addr), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
 
 #ifdef _DEBUG
   if(version != GameVersion::Steam2017) // ShadowDistanceReader func is weird in steam2017
-    MH_CreateHook((LPVOID)(mBaseAddress + ShadowDistanceReaderAddr[version]), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
+    MH_CreateHook(GameAddress<LPVOID>(ShadowDistanceReaderAddr), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
 #endif
 
   UpdateShadowResolution(Settings.ShadowResolution);
@@ -359,7 +359,7 @@ void ShadowFixes_Init()
   {
     // Patch out checks inside cModelShaderModule so more models can cast shadows
     // (not totally sure what the code this patches is checking, either something to do with LOD level, or maybe a "this->ShadowsDisabled" check of some kind)
-    SafeWrite(mBaseAddress + ShadowModel_HQPatch1Addr[version], (uint16_t)0x9090);
+    SafeWrite(GameAddress(ShadowModel_HQPatch1Addr), uint16_t(0x9090));
 
     // Load in shadow filters...
     int LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vector<std::string>>&list); // Rebug.cpp
@@ -371,12 +371,12 @@ void ShadowFixes_Init()
   {
     // Patching this seems to allow moving objects like trees to cast updated shadows (from swaying around)
     // Unfortunately the shadow-LOD version of these objects will also still get rendered, so we need the patch after this to disable those
-    SafeWrite(mBaseAddress + ShadowModel_HQPatch2Addr[version], (uint16_t)0x9090);
+    SafeWrite(GameAddress(ShadowModel_HQPatch2Addr), uint16_t(0x9090));
 
     // Disable LQ shadow model from being rendered, since we're now using HQ version above
-    SafeWrite(mBaseAddress + ShadowModel_DisableLQPatch1_Addr[version], (uint16_t)(0xE990));
+    SafeWrite(GameAddress(ShadowModel_DisableLQPatch1_Addr), uint16_t(0xE990));
     // alternate method:
-    //SafeWrite(mBaseAddress + ShadowModel_DisableLQPatch1_Addr[version], (uint16_t)(0x840F));
-    //SafeWrite(mBaseAddress + ShadowModel_DisableLQPatch1_Addr[version] + 0x10, (uint16_t)(0x850F));
+    //SafeWrite(GameAddress(ShadowModel_DisableLQPatch1_Addr), uint16_t(0x840F));
+    //SafeWrite(GameAddress(ShadowModel_DisableLQPatch1_Addr + 0x10), uint16_t(0x850F));
   }
 }
