@@ -30,6 +30,106 @@ const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4, 0x105
 
 int ExpectedShadowBuffSizeBits = 1; // to check against ShadowBuffSizeBits_Addr later on
 
+#ifdef _DEBUG
+std::vector<std::string> SeenShadowModels;
+std::mutex SeenShadowModelsMutex;
+bool LogShadowModels = false;
+char ShadowModelsToSkip[16384] = { 0 };
+#endif
+
+std::unordered_map<int, std::vector<std::string>> ShadowForceAllFilters;
+
+void BehaviorScr::SetCastShadows(bool castsShadows)
+{
+  // Debug build adds 0x30 bytes to class members somewhere, it's before the ones we touch though, so just add 0x30 if needed
+  int members_offset = version == GameVersion::Debug2017 ? 0x30 : 0;
+
+  auto* shadowList = (cModel*)(((uint8_t*)&this->ModelInfo) + members_offset);
+  if (!shadowList->EntryCount)
+    return;
+
+  for (int i = 0; i < shadowList->EntryCount; i++)
+  {
+    auto flags = shadowList->Entries[i].Flags;
+    if (castsShadows)
+      flags = flags | 1;
+    else
+      flags = flags & ~1;
+    shadowList->Entries[i].Flags = flags;
+  }
+
+  if (!castsShadows)
+    return;
+
+  int areaid_offset = version == GameVersion::Debug2017 ? 0x40 : 0;
+  uint32_t areaId = *(uint32_t*)(((uint8_t*)&this->AreaId) + areaid_offset) & 0xFFFF;
+
+  // Make sure we don't enable ShadowCast on "ENKEI" model
+  // Otherwise shadow covers almost entire city ruins area in route C...
+
+#ifndef _DEBUG
+  // release ver optimization, only run loops if this is correct area
+  if (ShadowForceAllFilters.count(areaId))
+#endif
+  {
+    // Loop through the Model/ShadowModel pairs, check if any should be filtered
+    if (shadowList->Unk8 && shadowList->Unk8->NumUnkA0)
+    {
+      for (int i = 0; i < shadowList->Unk8->NumUnkA0; i++)
+      {
+        auto* unkA0 = &shadowList->Unk8->UnkA0[i];
+        if (unkA0 && unkA0->NumShadowModelPairs)
+        {
+          for (int y = 0; y < unkA0->NumShadowModelPairs; y++)
+          {
+            auto* pair = &unkA0->ShadowModelPairs[y];
+            if (pair->ModelIndex == -1 || pair->ShadowModelIndex == -1)
+              continue;
+            if (pair->ModelIndex >= shadowList->ModelEntryCount)
+              continue;
+
+            auto* model = &shadowList->ModelEntries[pair->ModelIndex];
+            auto* modelName = &model->ModelName;
+
+            // debug2017 build adds 0x10 bytes to ModelEntry struct, so add that offset to our ptr...
+            if (version == GameVersion::Debug2017)
+              modelName = (const char**)((uint8_t*)modelName + (pair->ModelIndex * 0x10));
+
+            auto* shadowInfo = &shadowList->Entries[pair->ShadowModelIndex];
+
+#ifdef _DEBUG
+            std::string name = *modelName;
+            std::string lower_name = name;
+            std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
+              [](unsigned char c) { return std::tolower(c); });
+
+            if (LogShadowModels)
+            {
+              std::lock_guard<std::mutex> lock(SeenShadowModelsMutex);
+              if (std::find(SeenShadowModels.cbegin(), SeenShadowModels.cend(), lower_name) == SeenShadowModels.cend())
+              {
+                OutputDebugStringA((lower_name + "\n").c_str());
+                SeenShadowModels.push_back(lower_name);
+              }
+            }
+
+            if (strstr(ShadowModelsToSkip, lower_name.c_str()))
+              shadowInfo->Flags &= ~1;
+#endif
+
+            auto& filters = ShadowForceAllFilters[areaId];
+            for(auto& filter : filters)
+              if(!_stricmp(filter.c_str(), *modelName))
+                shadowInfo->Flags &= ~1;
+
+            //if (!strcmp(*modelName, "ENKEI") || (areaIdCoords == 0x1118 && !strcmp(*modelName, "GROUND_g11118jimen")))
+          }
+        }
+      }
+    }
+  }
+}
+
 void UpdateShadowResolution(int resolution)
 {
   // game uses shifts by 0xB/0xA of a value patched below to determine resolution used to setup shadow texture buffers
@@ -260,6 +360,11 @@ void ShadowFixes_Init()
     // Patch out checks inside cModelShaderModule so more models can cast shadows
     // (not totally sure what the code this patches is checking, either something to do with LOD level, or maybe a "this->ShadowsDisabled" check of some kind)
     SafeWrite(mBaseAddress + ShadowModel_HQPatch1Addr[version], (uint16_t)0x9090);
+
+    // Load in shadow filters...
+    int LoadINIFilterList(const wchar_t* listName, std::unordered_map<int, std::vector<std::string>>&list); // Rebug.cpp
+    int count = LoadINIFilterList(L"ShadowForceAllFilters", ShadowForceAllFilters);
+    dlog(" ShadowForceAllFilters: %d filters\n", count);
   }
 
   if (Settings.ShadowModelHQ)

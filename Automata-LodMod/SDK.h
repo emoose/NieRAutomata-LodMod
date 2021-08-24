@@ -177,69 +177,7 @@ public:
   // - ShadowLOD (vanquish 2010)
   // - LostDistRate (vanquish 2010)
 
-  void SetCastShadows(bool castsShadows)
-  {
-    // Debug build adds 0x30 bytes to class members somewhere, it's before the ones we touch though, so just add 0x30 if needed
-    int members_offset = version == GameVersion::Debug2017 ? 0x30 : 0;
-
-    auto* shadowList = (cModel*)(((uint8_t*)&this->ModelInfo) + members_offset);
-    if (!shadowList->EntryCount)
-      return;
-
-    for (int i = 0; i < shadowList->EntryCount; i++)
-    {
-      auto flags = shadowList->Entries[i].Flags;
-      if (castsShadows)
-        flags = flags | 1;
-      else
-        flags = flags & ~1;
-      shadowList->Entries[i].Flags = flags;
-    }
-
-    if (!castsShadows)
-      return;
-
-    int areaid_offset = version == GameVersion::Debug2017 ? 0x40 : 0;
-    int32_t areaId = *(int32_t*)(((uint8_t*)&this->AreaId) + areaid_offset);
-
-    // Make sure we don't enable ShadowCast on "ENKEI" model
-    // Otherwise shadow covers almost entire city ruins area in route C...
-    // TODO: need to find some faster way to skip past non-enkei models, can we find area-id like LOD filter does?
-    if (areaId == -1)
-    {
-      // Loop through the Model/ShadowModel pairs, check if any should be filtered
-      if (shadowList->Unk8 && shadowList->Unk8->NumUnkA0)
-      {
-        for (int i = 0; i < shadowList->Unk8->NumUnkA0; i++)
-        {
-          auto* unkA0 = &shadowList->Unk8->UnkA0[i];
-          if (unkA0 && unkA0->NumShadowModelPairs)
-          {
-            for (int y = 0; y < unkA0->NumShadowModelPairs; y++)
-            {
-              auto* pair = &unkA0->ShadowModelPairs[y];
-              if (pair->ModelIndex == -1 || pair->ShadowModelIndex == -1)
-                continue;
-              if (pair->ModelIndex >= shadowList->ModelEntryCount)
-                continue;
-
-              auto* model = &shadowList->ModelEntries[pair->ModelIndex];
-              auto* modelName = &model->ModelName;
-
-              // debug2017 build adds 0x10 bytes to ModelEntry struct, so add that offset to our ptr...
-              if (version == GameVersion::Debug2017)
-                modelName = (const char**)((uint8_t*)modelName + (pair->ModelIndex * 0x10));
-
-              auto* shadowInfo = &shadowList->Entries[pair->ShadowModelIndex];
-
-              if (!strcmp(*modelName, "ENKEI"))
-                shadowInfo->Flags &= ~1;
-            }
-          }
-        }
-      }
-    }
-  }
+  void SetCastShadows(bool castsShadows);;
 
   void DisableLODs()
   {
