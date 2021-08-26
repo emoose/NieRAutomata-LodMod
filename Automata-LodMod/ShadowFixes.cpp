@@ -149,17 +149,17 @@ void UpdateShadowResolution(int resolution)
   if (version == GameVersion::Steam2017)
   {
     uint8_t MovR8dEcx[] = { 0x41, 0x89, 0xC8, 0x90, 0x90, 0x90 };
-    SafeWrite(GameAddress(ShadowQualityPatchAddr + 10), MovR8dEcx, 6);
+    SafeWrite(GameAddress(ShadowQualityPatchAddr) + 10, MovR8dEcx, 6);
   }
   else if (version == GameVersion::Debug2017)
   {
     uint8_t MovEdxEcx[] = { 0x89, 0xCA, 0x90, 0x90, 0x90 };
-    SafeWrite(GameAddress(ShadowQualityPatchAddr + 10), MovEdxEcx, 5);
+    SafeWrite(GameAddress(ShadowQualityPatchAddr) + 10, MovEdxEcx, 5);
   }
   else
   {
     uint8_t MovEaxEcx[] = { 0x89, 0xC8, 0x90, 0x90, 0x90 };
-    SafeWrite(GameAddress(ShadowQualityPatchAddr + 10), MovEaxEcx, 5);
+    SafeWrite(GameAddress(ShadowQualityPatchAddr) + 10, MovEaxEcx, 5);
   }
 
   ExpectedShadowBuffSizeBits = value;
@@ -199,7 +199,7 @@ void UpdateShadowResolution(int resolution)
   if (version == GameVersion::Steam2017)
   {
     // special case for inlined CreateTextureBuffer
-    SafeWrite(GameAddress(g_HalfShadowMap_SizeAddr + 7), uint32_t(shadowQuadSize));
+    SafeWrite(GameAddress(g_HalfShadowMap_SizeAddr) + 7, uint32_t(shadowQuadSize));
 
     SafeWrite(GameAddress(ShadowBufferSizePatch5Addr2), uint32_t(shadowQuadSize));
     SafeWrite(GameAddress(ShadowBufferSizePatch6Addr2), uint32_t(shadowQuadSize));
@@ -377,6 +377,6 @@ void ShadowFixes_Init()
     SafeWrite(GameAddress(ShadowModel_DisableLQPatch1_Addr), uint16_t(0xE990));
     // alternate method:
     //SafeWrite(GameAddress(ShadowModel_DisableLQPatch1_Addr), uint16_t(0x840F));
-    //SafeWrite(GameAddress(ShadowModel_DisableLQPatch1_Addr + 0x10), uint16_t(0x850F));
+    //SafeWrite(GameAddress(ShadowModel_DisableLQPatch1_Addr) + 0x10, uint16_t(0x850F));
   }
 }
