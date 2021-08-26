@@ -7,6 +7,10 @@
 #include <string>
 #include <sstream>
 
+const uint32_t MovieFileHeapSize_Addr[] = { 0x86BA27 + 1, 0x8632C7 + 1, 0x8927E7 + 1, 0x644852 + 2, 0xA0F86A + 1 };
+const uint32_t MovieVramHeapSize_Addr[] = { 0x86BC8F + 1, 0x86352F + 1, 0x892A4F + 1, 0x644B85 + 2, 0xA0FAD2 + 1 };
+const uint32_t cMemoryDeviceBase__createHeap_Addr[] = { 0x2622B0, 0x25B3B0, 0x2452D0, 0x91FCC0, 0xE1BA10 };
+
 #pragma pack(push, 1)
 struct cLodSlot
 {
@@ -268,29 +272,67 @@ void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BY
 }
 
 uint32_t PrevNumLods = 7;
+uint32_t NewNumLods = 0;
 
-typedef void* (*MemorySystem__CreateRootHeap_Fn)(void* destHeap, uint64_t heapSize, void* a3, char* heapName);
-MemorySystem__CreateRootHeap_Fn MemorySystem__CreateRootHeap_Orig;
-void* MemorySystem__CreateRootHeap_Hook(void* destHeap, uint64_t heapSize, void* a3, char* heapName)
+uint32_t aMovieFileOld = 0;
+uint32_t aMovieVramOld = 0;
+
+// 4k is 4x 1080p, so quad the movie buffer sizes
+const uint32_t aMovieFileNew = 0x3FC0000 * 4; 
+const uint32_t aMovieVramNew = 0x1E00000 * 4;
+
+void UpdateRootHeap(char* heapName, uint64_t* heapSize)
 {
   if (!strcmp(heapName, "TEXTURE ROOT"))
   {
-    uint32_t aHighMapVramOld = uint32_t(0x6400000 * PrevNumLods);
-    uint32_t aHighMapVramNew = uint32_t(0x6400000 * Settings.HQMapSlots);
+    if (aMovieVramOld)
+    {
+      *heapSize -= aMovieVramOld;
+      *heapSize += aMovieVramNew;
+    }
 
-    heapSize -= aHighMapVramOld;
-    heapSize += aHighMapVramNew;
+    if (NewNumLods)
+    {
+      uint32_t aHighMapVramOld = uint32_t(0x6400000 * PrevNumLods);
+      uint32_t aHighMapVramNew = uint32_t(0x6400000 * NewNumLods);
+
+      *heapSize -= aHighMapVramOld;
+      *heapSize += aHighMapVramNew;
+    }
   }
   else if (!strcmp(heapName, "FILE ROOT"))
   {
-    uint32_t aHighMapFileOld = uint32_t(0x1600000 * PrevNumLods);
-    uint32_t aHighMapFileNew = uint32_t(0x1600000 * Settings.HQMapSlots);
+    if (aMovieFileOld)
+    {
+      *heapSize -= aMovieFileOld;
+      *heapSize += aMovieFileNew;
+    }
 
-    heapSize -= aHighMapFileOld;
-    heapSize += aHighMapFileNew;
+    if (NewNumLods)
+    {
+      uint32_t aHighMapFileOld = uint32_t(0x1600000 * PrevNumLods);
+      uint32_t aHighMapFileNew = uint32_t(0x1600000 * NewNumLods);
+
+      *heapSize -= aHighMapFileOld;
+      *heapSize += aHighMapFileNew;
+    }
   }
+}
 
-  return MemorySystem__CreateRootHeap_Orig(destHeap, heapSize, a3, heapName);
+typedef void* (*cMemoryDeviceBase__createHeap_2017_Fn)(void* a1, void* destHeap, uint64_t heapSize, void* a3, char* heapName);
+cMemoryDeviceBase__createHeap_2017_Fn cMemoryDeviceBase__createHeap_2017_Orig;
+void* cMemoryDeviceBase__createHeap_2017_Hook(void* a1, void* destHeap, uint64_t heapSize, void* a3, char* heapName)
+{
+  UpdateRootHeap(heapName, &heapSize);
+  return cMemoryDeviceBase__createHeap_2017_Orig(a1, destHeap, heapSize, a3, heapName);
+}
+
+typedef void* (*cMemoryDeviceBase__createHeap_Fn)(void* destHeap, uint64_t heapSize, void* a3, char* heapName);
+cMemoryDeviceBase__createHeap_Fn cMemoryDeviceBase__createHeap_Orig;
+void* cMemoryDeviceBase__createHeap_Hook(void* destHeap, uint64_t heapSize, void* a3, char* heapName)
+{
+  UpdateRootHeap(heapName, &heapSize);
+  return cMemoryDeviceBase__createHeap_Orig(destHeap, heapSize, a3, heapName);
 }
 
 void LoadListSetup_Hook(BYTE* a1)
@@ -319,6 +361,32 @@ void LoadListSetup_Hook(BYTE* a1)
 
 void MapMod_Init()
 {
+  if (Settings.HQMapSlots > MAX_LOD_SLOTS)
+    Settings.HQMapSlots = MAX_LOD_SLOTS;
+
+  // Hook root heap init func so we can increase buffers past 32-bits
+  if(version == GameVersion::Steam2017 || version == GameVersion::Debug2017)
+    MH_CreateHook(GameAddress<LPVOID>(cMemoryDeviceBase__createHeap_Addr), cMemoryDeviceBase__createHeap_2017_Hook, (LPVOID*)&cMemoryDeviceBase__createHeap_2017_Orig);
+  else
+    MH_CreateHook(GameAddress<LPVOID>(cMemoryDeviceBase__createHeap_Addr), cMemoryDeviceBase__createHeap_Hook, (LPVOID*)&cMemoryDeviceBase__createHeap_Orig);
+
+  // Expand MovieFile/MovieVram buffers, the root heaps for them will be updated in hook above
+  // (allows videos above 1080 to play reliably)
+  uint32_t size_MovieFile = *GameAddress<uint32_t*>(MovieFileHeapSize_Addr);
+  if (aMovieFileNew > size_MovieFile)
+  {
+    aMovieFileOld = size_MovieFile;
+    // new size is larger, extend child & parent heaps...
+    SafeWriteModule(0x86BA27 + 1, aMovieFileNew);
+  }
+  uint32_t size_MovieVram = *GameAddress<uint32_t*>(MovieVramHeapSize_Addr);
+  if (aMovieVramNew > size_MovieVram)
+  {
+    aMovieVramOld = size_MovieVram;
+    // new size is larger, extend child & parent heaps...
+    SafeWriteModule(0x86BC8F + 1, aMovieVramNew);
+  }
+
   if (version == GameVersion::Steam2017)
   {
     // Expand buffers in 2017 to match 2021, allows using 2021 data files with 2017 EXE
@@ -368,9 +436,7 @@ void MapMod_Init()
     return;
 
   PrevNumLods = *GameAddress<uint8_t*>(0x7C72C7 + 2);
-
-  if (Settings.HQMapSlots > MAX_LOD_SLOTS)
-    Settings.HQMapSlots = MAX_LOD_SLOTS;
+  NewNumLods = Settings.HQMapSlots;
 
   // Increase memory buffers to handle the increased LOD slots...
   uint32_t aHighMapVramOld = uint32_t(0x6400000 * PrevNumLods);
@@ -380,9 +446,6 @@ void MapMod_Init()
   uint32_t aHighMapFileOld = uint32_t(0x1600000 * PrevNumLods);
   uint32_t aHighMapFileNew = uint32_t(0x1600000 * Settings.HQMapSlots);
   SafeWriteModule(0x86B8A1 + 1, aHighMapFileNew);
-
-  // Hook root heap init func so we can increase buffers past 32-bits
-  MH_CreateHook(GameAddress<LPVOID>(0x2622B0), MemorySystem__CreateRootHeap_Hook, (LPVOID*)&MemorySystem__CreateRootHeap_Orig);
 
   // Set cHighMapController constructor to use our LOD slot count
   SafeWriteModule(0x7C72C7 + 2, uint8_t(Settings.HQMapSlots));
