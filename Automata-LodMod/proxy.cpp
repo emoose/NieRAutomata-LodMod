@@ -393,7 +393,7 @@ void Proxy_InitSteamStub()
 // DLL wrapper code
 
 HMODULE origModule = NULL;
-WCHAR origModulePath[4096];
+WCHAR origModulePath[4096] = { 0 };
 
 bool Proxy_Attach()
 {

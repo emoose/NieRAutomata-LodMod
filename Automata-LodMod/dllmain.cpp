@@ -38,7 +38,7 @@ LodModSettings Settings = {
   .CommunicationScreenResolution = 256,
   .HQMapSlots = 7,
   .WrapperLoadLibrary = { 0 },
-  .BuffersMovieMultiplier = 4,
+  .BuffersMovieMultiplier = 1,
   .BuffersExtendTo2021 = true
 };
 
@@ -79,76 +79,50 @@ bool GetSaveFolder(wchar_t* destBuf, size_t sizeInBytes)
   return result;
 }
 
-void Settings_ReadINI()
+void Settings_ReadINI(const WCHAR* iniPath)
 {
-  // Try loading config INI:
-  memset(IniDir, 0, 4096 * sizeof(WCHAR));
-  memset(IniPath, 0, 4096 * sizeof(WCHAR));
-  memset(LogPath, 0, 4096 * sizeof(WCHAR));
-
-  // Check for INI inside LodMod DLLs folder first
-  if (GetModuleFolder(DllHModule, IniDir, 4096))
-    swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
-
-  if (!FileExists(IniPath))
-  {
-    // Doesn't exist in DLL folder, try game EXE folder
-    if (GetModuleFolder(GameHModule, IniDir, 4096))
-      swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
-  }
-
-  if (!FileExists(IniPath))
-  {
-    // Doesn't exist in DLL/EXE folder, try checking games save folder
-    // Win7/Win10: Documents\My Games\NieR_Automata
-    // UWP: Documents\My Games\NieR_Automata_PC
-    
-    if (GetSaveFolder(IniDir, 4096))
-      swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
-  }
-
-  if (!FileExists(IniPath))
+  if (!FileExists(iniPath))
     return;
 
-  origModulePath[0] = '\0';
+  if (!wcslen(origModulePath))
+    GetPrivateProfileStringW(L"Wrapper", L"LoadLibrary", L"", origModulePath, 4096, iniPath);
 
-  GetPrivateProfileStringW(L"Wrapper", L"LoadLibrary", L"", origModulePath, 4096, IniPath);
-
-  Settings.DebugLog = INI_GetBool(IniPath, L"LodMod", L"DebugLog", false);
-  Settings.LODMultiplier = INI_GetFloat(IniPath, L"LodMod", L"LODMultiplier", 0);
-  Settings.AOMultiplierWidth = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplierWidth", 1);
-  Settings.AOMultiplierHeight = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplierHeight", 1);
-  Settings.ShadowDistanceMultiplier = INI_GetFloat(IniPath, L"LodMod", L"ShadowDistanceMultiplier", 1);
-  Settings.ShadowDistanceMinimum = INI_GetFloat(IniPath, L"LodMod", L"ShadowDistanceMinimum", 0);
-  Settings.ShadowDistanceMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowDistanceMaximum", 0);
-  Settings.ShadowResolution = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", 2048, IniPath);
-  Settings.ShadowFilterStrengthBias = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthBias", 0);
-  Settings.ShadowFilterStrengthMinimum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMinimum", 0);
-  Settings.ShadowFilterStrengthMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMaximum", 0);
-  Settings.DisableManualCulling = INI_GetBool(IniPath, L"LodMod", L"DisableManualCulling", false);
-  Settings.CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", 256, IniPath);
-  Settings.HQMapSlots = GetPrivateProfileIntW(L"LodMod", L"HQMapSlots", 7, IniPath);
-  Settings.ShadowModelHQ = INI_GetBool(IniPath, L"LodMod", L"ShadowModelHQ", false);
-  Settings.ShadowModelForceAll = INI_GetBool(IniPath, L"LodMod", L"ShadowModelForceAll", false);
-  Settings.BuffersMovieMultiplier = INI_GetFloat(IniPath, L"Buffers", L"MovieMultiplier", 4);
-  Settings.BuffersExtendTo2021 = INI_GetBool(IniPath, L"Buffers", L"ExtendTo2021", true);
+  Settings.DebugLog = INI_GetBool(iniPath, L"LodMod", L"DebugLog", Settings.DebugLog);
+  Settings.LODMultiplier = INI_GetFloat(iniPath, L"LodMod", L"LODMultiplier", Settings.LODMultiplier);
+  Settings.AOMultiplierWidth = INI_GetFloat(iniPath, L"LodMod", L"AOMultiplierWidth", Settings.AOMultiplierWidth);
+  Settings.AOMultiplierHeight = INI_GetFloat(iniPath, L"LodMod", L"AOMultiplierHeight", Settings.AOMultiplierHeight);
+  Settings.ShadowDistanceMultiplier = INI_GetFloat(iniPath, L"LodMod", L"ShadowDistanceMultiplier", Settings.ShadowDistanceMultiplier);
+  Settings.ShadowDistanceMinimum = INI_GetFloat(iniPath, L"LodMod", L"ShadowDistanceMinimum", Settings.ShadowDistanceMinimum);
+  Settings.ShadowDistanceMaximum = INI_GetFloat(iniPath, L"LodMod", L"ShadowDistanceMaximum", Settings.ShadowDistanceMaximum);
+  Settings.ShadowResolution = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", Settings.ShadowResolution, iniPath);
+  Settings.ShadowFilterStrengthBias = INI_GetFloat(iniPath, L"LodMod", L"ShadowFilterStrengthBias", Settings.ShadowFilterStrengthBias);
+  Settings.ShadowFilterStrengthMinimum = INI_GetFloat(iniPath, L"LodMod", L"ShadowFilterStrengthMinimum", Settings.ShadowFilterStrengthMinimum);
+  Settings.ShadowFilterStrengthMaximum = INI_GetFloat(iniPath, L"LodMod", L"ShadowFilterStrengthMaximum", Settings.ShadowFilterStrengthMaximum);
+  Settings.DisableManualCulling = INI_GetBool(iniPath, L"LodMod", L"DisableManualCulling", Settings.DisableManualCulling);
+  Settings.CommunicationScreenResolution = GetPrivateProfileIntW(L"LodMod", L"CommunicationScreenResolution", Settings.CommunicationScreenResolution, iniPath);
+  Settings.HQMapSlots = GetPrivateProfileIntW(L"LodMod", L"HQMapSlots", Settings.HQMapSlots, iniPath);
+  Settings.ShadowModelHQ = INI_GetBool(iniPath, L"LodMod", L"ShadowModelHQ", Settings.ShadowModelHQ);
+  Settings.ShadowModelForceAll = INI_GetBool(iniPath, L"LodMod", L"ShadowModelForceAll", Settings.ShadowModelForceAll);
+  Settings.BuffersMovieMultiplier = INI_GetFloat(iniPath, L"Buffers", L"MovieMultiplier", Settings.BuffersMovieMultiplier);
+  Settings.BuffersExtendTo2021 = INI_GetBool(iniPath, L"Buffers", L"ExtendTo2021", Settings.BuffersExtendTo2021);
 
   // Old INI keynames...
   {
-    if (INI_GetBool(IniPath, L"LodMod", L"DisableLODs", false))
+    if (INI_GetBool(iniPath, L"LodMod", L"DisableLODs", false))
       Settings.LODMultiplier = 0;
 
-    if (INI_GetBool(IniPath, L"LodMod", L"FullResAO", false))
+    if (INI_GetBool(iniPath, L"LodMod", L"FullResAO", false))
       Settings.AOMultiplierWidth = Settings.AOMultiplierHeight = 2;
 
-    auto old_aomultiplier = INI_GetFloat(IniPath, L"LodMod", L"AOMultiplier", 0);
+    auto old_aomultiplier = INI_GetFloat(iniPath, L"LodMod", L"AOMultiplier", 0);
     if (old_aomultiplier != 0)
       Settings.AOMultiplierWidth = Settings.AOMultiplierHeight = old_aomultiplier;
 
-    auto old_dist = INI_GetFloat(IniPath, L"LodMod", L"ShadowMinimumDistance", 0);
+    auto old_dist = INI_GetFloat(iniPath, L"LodMod", L"ShadowMinimumDistance", 0);
     if (old_dist != 0)
       Settings.ShadowDistanceMinimum = old_dist;
-    old_dist = INI_GetFloat(IniPath, L"LodMod", L"ShadowMaximumDistance", 0);
+
+    old_dist = INI_GetFloat(iniPath, L"LodMod", L"ShadowMaximumDistance", 0);
     if (old_dist != 0)
       Settings.ShadowDistanceMaximum = old_dist;
   }
@@ -160,40 +134,38 @@ void Settings_ReadINI()
   if (Settings.HQMapSlots < 7)
     Settings.HQMapSlots = 7;
 
-  if (Settings.DebugLog)
-  {
-    swprintf_s(LogPath, L"%sLodMod.log", IniDir);
-
-    dlog("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
-    if (GetModuleName(DllHModule, ModuleName, 4096))
-      dlog("LodMod module name: %S\n", ModuleName);
-    dlog("Detected game type: %s\n", GameVersionName[int(version)]);
-    dlog("Wrapping DLL from %S\n", wcslen(origModulePath) > 0 ? origModulePath : L"system folder");
-    dlog("Loaded INI from %S\n\nSettings:\n", IniPath);
-    dlog(" LODMultiplier: %f\n", Settings.LODMultiplier);
-    dlog(" AOMultiplierWidth: %f\n", Settings.AOMultiplierWidth);
-    dlog(" AOMultiplierHeight: %f\n", Settings.AOMultiplierHeight);
-    dlog(" ShadowDistanceMultiplier: %f\n", Settings.ShadowDistanceMultiplier);
-    dlog(" ShadowDistanceMinimum: %f\n", Settings.ShadowDistanceMinimum);
-    dlog(" ShadowDistanceMaximum: %f\n", Settings.ShadowDistanceMaximum);
-    dlog(" ShadowResolution: %d\n", Settings.ShadowResolution);
-    dlog(" ShadowFilterStrengthBias: %f\n", Settings.ShadowFilterStrengthBias);
-    dlog(" ShadowFilterStrengthMinimum: %f\n", Settings.ShadowFilterStrengthMinimum);
-    dlog(" ShadowFilterStrengthMaximum: %f\n", Settings.ShadowFilterStrengthMaximum);
-    dlog(" DisableManualCulling: %s\n", Settings.DisableManualCulling ? "true" : "false");
-    dlog(" CommunicationScreenResolution: %d\n", Settings.CommunicationScreenResolution);
-    dlog(" HQMapSlots: %d\n\n", Settings.HQMapSlots);
-  }
-
 #ifdef _DEBUG
-  hIniUpdateThread = CreateThread(
-    NULL,                   // default security attributes
-    0,                      // use default stack size  
-    IniUpdateThread,       // thread function name
-    nullptr,          // argument to thread function 
-    0,                      // use default creation flags 
-    &dwIniUpdateThread);   // returns the thread identifier 
+  if (!hIniUpdateThread)
+    hIniUpdateThread = CreateThread(
+      NULL,                   // default security attributes
+      0,                      // use default stack size
+      IniUpdateThread,       // thread function name
+      nullptr,          // argument to thread function
+      0,                      // use default creation flags
+      &dwIniUpdateThread);   // returns the thread identifier
 #endif
+}
+
+void Settings_LoadAllFromPath(const std::filesystem::path& path)
+{
+  for (const auto& entry : std::filesystem::directory_iterator(path))
+  {
+    if (!entry.is_directory())
+      continue;
+
+    // Check if this dir has any INI
+    auto iniEntry = entry.path() / L"LodMod.ini";
+    auto iniEntryString = iniEntry.wstring();
+    auto iniEntryData = iniEntryString.c_str();
+    if (FileExists(iniEntryData))
+    {
+      dlog("Reading INI from %S...\n", iniEntryData);
+      Settings_ReadINI(iniEntryData);
+    }
+
+    // Check if any subfolders of this dir have INIs
+    Settings_LoadAllFromPath(entry.path());
+  }
 }
 
 std::unordered_map<std::wstring, HANDLE> LoadedPlugins;
@@ -325,10 +297,73 @@ bool InitPlugin()
   }
 
   // wrong EXE?
-  if(!foundVersion)
+  if (!foundVersion)
     return false;
 
-  Settings_ReadINI();
+  // Try loading config INI:
+  WCHAR GameDir[4096] = { 0 };
+  memset(IniDir, 0, 4096 * sizeof(WCHAR));
+  memset(IniPath, 0, 4096 * sizeof(WCHAR));
+  memset(LogPath, 0, 4096 * sizeof(WCHAR));
+
+  bool gotGameDir = GetModuleFolder(GameHModule, GameDir, 4096);
+
+  // Check for INI inside LodMod DLLs folder first
+  if (GetModuleFolder(DllHModule, GameDir, 4096))
+    swprintf_s(IniPath, L"%sLodMod.ini", GameDir);
+
+  // Doesn't exist in DLL folder? try game EXE folder
+  if (!FileExists(IniPath) && gotGameDir)
+  {
+    wcscpy_s(IniDir, GameDir);
+    swprintf_s(IniPath, L"%sLodMod.ini", GameDir);
+  }
+
+  if (!FileExists(IniPath))
+  {
+    // Doesn't exist in DLL/EXE folder, try checking games save folder
+    // Win7/Win10: Documents\My Games\NieR_Automata
+    // UWP: Documents\My Games\NieR_Automata_PC
+
+    if (GetSaveFolder(IniDir, 4096))
+      swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
+  }
+
+  Settings_ReadINI(IniPath);
+
+  if (Settings.DebugLog)
+  {
+    swprintf_s(LogPath, L"%sLodMod.log", IniDir);
+
+    dlog("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
+    if (GetModuleName(DllHModule, ModuleName, 4096))
+      dlog("LodMod module name: %S\n", ModuleName);
+
+    dlog("Detected game type: %s\n", GameVersionName[int(version)]);
+    dlog("Wrapping DLL from %S\n", wcslen(origModulePath) > 0 ? origModulePath : L"system folder");
+    dlog("Reading INI from %S...\n", IniPath);
+  }
+
+  // Load any extra INIs inside game folders
+  Settings_LoadAllFromPath(GameDir);
+
+  if (Settings.DebugLog)
+  {
+    dlog("\nSettings read:\n");
+    dlog(" LODMultiplier: %f\n", Settings.LODMultiplier);
+    dlog(" AOMultiplierWidth: %f\n", Settings.AOMultiplierWidth);
+    dlog(" AOMultiplierHeight: %f\n", Settings.AOMultiplierHeight);
+    dlog(" ShadowDistanceMultiplier: %f\n", Settings.ShadowDistanceMultiplier);
+    dlog(" ShadowDistanceMinimum: %f\n", Settings.ShadowDistanceMinimum);
+    dlog(" ShadowDistanceMaximum: %f\n", Settings.ShadowDistanceMaximum);
+    dlog(" ShadowResolution: %d\n", Settings.ShadowResolution);
+    dlog(" ShadowFilterStrengthBias: %f\n", Settings.ShadowFilterStrengthBias);
+    dlog(" ShadowFilterStrengthMinimum: %f\n", Settings.ShadowFilterStrengthMinimum);
+    dlog(" ShadowFilterStrengthMaximum: %f\n", Settings.ShadowFilterStrengthMaximum);
+    dlog(" DisableManualCulling: %s\n", Settings.DisableManualCulling ? "true" : "false");
+    dlog(" CommunicationScreenResolution: %d\n", Settings.CommunicationScreenResolution);
+    dlog(" HQMapSlots: %d\n\n", Settings.HQMapSlots);
+  }
 
   return true;
 }
@@ -343,7 +378,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
   case DLL_PROCESS_ATTACH:
     DllHModule = hModule;
 
-    if(InitPlugin())
+    if (InitPlugin())
       Proxy_InitSteamStub();
 
     Proxy_Attach();
