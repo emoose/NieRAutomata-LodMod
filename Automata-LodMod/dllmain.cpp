@@ -37,7 +37,9 @@ LodModSettings Settings = {
   .ShadowModelForceAll = false,
   .CommunicationScreenResolution = 256,
   .HQMapSlots = 7,
-  .WrapperLoadLibrary = { 0 }
+  .WrapperLoadLibrary = { 0 },
+  .BuffersMovieMultiplier = 4,
+  .BuffersExtendTo2021 = true
 };
 
 GameVersion version; // which GameVersion we're injected into
@@ -128,6 +130,8 @@ void Settings_ReadINI()
   Settings.HQMapSlots = GetPrivateProfileIntW(L"LodMod", L"HQMapSlots", 7, IniPath);
   Settings.ShadowModelHQ = INI_GetBool(IniPath, L"LodMod", L"ShadowModelHQ", false);
   Settings.ShadowModelForceAll = INI_GetBool(IniPath, L"LodMod", L"ShadowModelForceAll", false);
+  Settings.BuffersMovieMultiplier = INI_GetFloat(IniPath, L"Buffers", L"MovieMultiplier", 4);
+  Settings.BuffersExtendTo2021 = INI_GetBool(IniPath, L"Buffers", L"ExtendTo2021", true);
 
   // Old INI keynames...
   {
@@ -192,6 +196,61 @@ void Settings_ReadINI()
 #endif
 }
 
+std::unordered_map<std::wstring, HANDLE> LoadedPlugins;
+
+TCHAR	szIniBuffer[65535];
+int LoadExtraPlugins(const wchar_t* listName, std::unordered_map<std::wstring, HANDLE>& list)
+{
+  szIniBuffer[0] = 0;
+
+  int count = 0;
+
+  if (GetPrivateProfileSection(listName, szIniBuffer, 65535, IniPath))
+    dlog("LoadExtraPlugins: loading plugins\n");
+  else
+    return 0;
+
+  TCHAR* curString = szIniBuffer;
+  for (TCHAR* cp = szIniBuffer; ; cp++)
+  {
+    if (!cp[0])
+    {
+      std::wstring key = curString;
+
+      if (key.length() > 0)
+      {
+        if (list.count(key) > 0)
+        {
+          dlog("LoadExtraPlugins: tried loading in %S, already loaded!\n", key.c_str());
+        }
+        else
+        {
+          dlog("LoadExtraPlugins: loading in %S\n", key.c_str());
+          auto handle = LoadLibraryW(key.c_str());
+          if (!handle)
+            dlog("LoadExtraPlugins: failed to load plugin %S, LastError = %d\n", key.c_str(), GetLastError());
+          else
+          {
+            list[key] = handle;
+            count++;
+          }
+        }
+      }
+
+      curString = &cp[1];
+
+      if (!curString[0])
+      {
+        // end of file
+        break;
+      }
+    }
+  }
+
+  dlog("LoadExtraPlugins: %d plugins loaded!\n", count);
+  return count;
+}
+
 bool injected = false;
 void LodMod_Init()
 {
@@ -238,6 +297,8 @@ void LodMod_Init()
   }
 
   dlog("\nLodMod init complete!\n\n");
+
+  LoadExtraPlugins(L"LoadExtraPlugins", LoadedPlugins);
 }
 
 bool InitPlugin()

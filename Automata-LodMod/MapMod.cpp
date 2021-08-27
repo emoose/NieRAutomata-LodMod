@@ -274,21 +274,24 @@ void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BY
 uint32_t PrevNumLods = 7;
 uint32_t NewNumLods = 0;
 
-uint32_t aMovieFileOld = 0;
-uint32_t aMovieVramOld = 0;
+const uint32_t size_MovieFileDefault = 0x3FC0000;
+const uint32_t size_MovieVramDefault = 0x1E00000;
+
+uint32_t size_MovieFileOld = 0;
+uint32_t size_MovieVramOld = 0;
 
 // 4k is 4x 1080p, so quad the movie buffer sizes
-const uint32_t aMovieFileNew = 0x3FC0000 * 4; 
-const uint32_t aMovieVramNew = 0x1E00000 * 4;
+uint32_t size_MovieFileNew = 0; 
+uint32_t size_MovieVramNew = 0;
 
 void UpdateRootHeap(char* heapName, uint64_t* heapSize)
 {
   if (!strcmp(heapName, "TEXTURE ROOT"))
   {
-    if (aMovieVramOld)
+    if (size_MovieVramNew > size_MovieVramOld)
     {
-      *heapSize -= aMovieVramOld;
-      *heapSize += aMovieVramNew;
+      *heapSize -= size_MovieVramOld;
+      *heapSize += size_MovieVramNew;
     }
 
     if (NewNumLods)
@@ -302,10 +305,10 @@ void UpdateRootHeap(char* heapName, uint64_t* heapSize)
   }
   else if (!strcmp(heapName, "FILE ROOT"))
   {
-    if (aMovieFileOld)
+    if (size_MovieFileNew > size_MovieFileOld)
     {
-      *heapSize -= aMovieFileOld;
-      *heapSize += aMovieFileNew;
+      *heapSize -= size_MovieFileOld;
+      *heapSize += size_MovieFileNew;
     }
 
     if (NewNumLods)
@@ -372,22 +375,27 @@ void MapMod_Init()
 
   // Expand MovieFile/MovieVram buffers, the root heaps for them will be updated in hook above
   // (allows videos above 1080 to play reliably)
+  size_MovieFileNew = float(size_MovieFileDefault) * Settings.BuffersMovieMultiplier;
   uint32_t size_MovieFile = *GameAddress<uint32_t*>(MovieFileHeapSize_Addr);
-  if (aMovieFileNew > size_MovieFile)
+  if (size_MovieFileNew > size_MovieFile)
   {
-    aMovieFileOld = size_MovieFile;
+    size_MovieFileOld = size_MovieFile;
+    dlog("[Buffers] MovieFile original 0x%X, updating to 0x%X (x%f)\n", size_MovieFileOld, size_MovieFileNew, Settings.BuffersMovieMultiplier);
     // new size is larger, extend child & parent heaps...
-    SafeWriteModule(0x86BA27 + 1, aMovieFileNew);
-  }
-  uint32_t size_MovieVram = *GameAddress<uint32_t*>(MovieVramHeapSize_Addr);
-  if (aMovieVramNew > size_MovieVram)
-  {
-    aMovieVramOld = size_MovieVram;
-    // new size is larger, extend child & parent heaps...
-    SafeWriteModule(0x86BC8F + 1, aMovieVramNew);
+    SafeWrite(GameAddress(MovieFileHeapSize_Addr), size_MovieFileNew);
   }
 
-  if (version == GameVersion::Steam2017)
+  size_MovieVramNew = float(size_MovieVramDefault) * Settings.BuffersMovieMultiplier;
+  uint32_t size_MovieVram = *GameAddress<uint32_t*>(MovieVramHeapSize_Addr);
+  if (size_MovieVramNew > size_MovieVram)
+  {
+    size_MovieVramOld = size_MovieVram;
+    dlog("[Buffers] MovieVram original 0x%X, updating to 0x%X (x%f)\n", size_MovieVramOld, size_MovieVramNew, Settings.BuffersMovieMultiplier);
+    // new size is larger, extend child & parent heaps...
+    SafeWrite(GameAddress(MovieVramHeapSize_Addr), size_MovieVramNew);
+  }
+
+  if (version == GameVersion::Steam2017 && Settings.BuffersExtendTo2021)
   {
     // Expand buffers in 2017 to match 2021, allows using 2021 data files with 2017 EXE
     // (recommend grabbing shader.dat from 2017 data000.cpk & ui folder from 2017 data009.cpk, else you'll encounter some weirdness!)
@@ -401,6 +409,8 @@ void MapMod_Init()
     uint32_t size_WorkRoot_GraphicWork = *GameAddress<uint32_t*>(0x64430C + 2);
     if (new_GraphicWork > size_WorkRoot_GraphicWork)
     {
+      dlog("[Buffers] GraphicWork original 0x%X, updating to 0x%X\n", size_WorkRoot_GraphicWork, new_GraphicWork);
+
       auto tweak_GraphicWork = new_GraphicWork - size_WorkRoot_GraphicWork;
       size_WorkRoot += tweak_GraphicWork;
       size_WorkRoot_GraphicWork += tweak_GraphicWork;
@@ -413,9 +423,12 @@ void MapMod_Init()
     uint32_t size_FileRoot_ShaderFile = *GameAddress<uint32_t*>(0x644786 + 2);
     if (new_ShaderFile > size_FileRoot_ShaderFile)
     {
+      dlog("[Buffers] ShaderFile original 0x%X, updating to 0x%X\n", size_FileRoot_ShaderFile, new_ShaderFile);
+
       auto tweak_ShaderFile = new_ShaderFile - size_FileRoot_ShaderFile;
       size_FileRoot += tweak_ShaderFile;
       size_FileRoot_ShaderFile += tweak_ShaderFile;
+
       SafeWriteModule(0x64427D + 2, size_FileRoot);
       SafeWriteModule(0x644786 + 2, size_FileRoot_ShaderFile);
     }
@@ -424,9 +437,12 @@ void MapMod_Init()
     uint32_t size_TextureRoot_UIVram = *GameAddress<uint32_t*>(0x644A8A + 2);
     if (new_UIVram > size_TextureRoot_UIVram)
     {
+      dlog("[Buffers] UIVram original 0x%X, updating to 0x%X\n", size_TextureRoot_UIVram, new_UIVram);
+
       auto tweak_UIVram = new_UIVram - size_TextureRoot_UIVram;
       size_TextureRoot += tweak_UIVram;
       size_TextureRoot_UIVram += tweak_UIVram;
+
       SafeWriteModule(0x6442A5 + 2, size_TextureRoot);
       SafeWriteModule(0x644A8A + 2, size_TextureRoot_UIVram);
     }

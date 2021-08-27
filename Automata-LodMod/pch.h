@@ -82,6 +82,9 @@ struct LodModSettings
   int CommunicationScreenResolution;
   int HQMapSlots;
   WCHAR WrapperLoadLibrary[4096];
+
+  float BuffersMovieMultiplier;
+  bool BuffersExtendTo2021;
 };
 extern LodModSettings Settings;
 extern uintptr_t mBaseAddress;
