@@ -4,7 +4,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.76.3"
+#define LODMOD_VERSION "0.76.4"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
@@ -130,6 +130,8 @@ void Settings_ReadINI(const WCHAR* iniPath)
   // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
   Settings.AOMultiplierWidth = fmaxf(fminf(Settings.AOMultiplierWidth, 2), 0.1f);
   Settings.AOMultiplierHeight = fmaxf(fminf(Settings.AOMultiplierHeight, 2), 0.1f);
+
+  Settings.BuffersMovieMultiplier = fmaxf(Settings.BuffersMovieMultiplier, 1.f);
 
   if (Settings.HQMapSlots < 7)
     Settings.HQMapSlots = 7;
@@ -349,7 +351,7 @@ bool InitPlugin()
 
   if (Settings.DebugLog)
   {
-    dlog("\nSettings read:\n");
+    dlog("\nSettings:\n");
     dlog(" LODMultiplier: %f\n", Settings.LODMultiplier);
     dlog(" AOMultiplierWidth: %f\n", Settings.AOMultiplierWidth);
     dlog(" AOMultiplierHeight: %f\n", Settings.AOMultiplierHeight);
@@ -362,7 +364,10 @@ bool InitPlugin()
     dlog(" ShadowFilterStrengthMaximum: %f\n", Settings.ShadowFilterStrengthMaximum);
     dlog(" DisableManualCulling: %s\n", Settings.DisableManualCulling ? "true" : "false");
     dlog(" CommunicationScreenResolution: %d\n", Settings.CommunicationScreenResolution);
-    dlog(" HQMapSlots: %d\n\n", Settings.HQMapSlots);
+    dlog(" HQMapSlots: %d\n", Settings.HQMapSlots);
+    dlog(" BuffersExtendTo2021: %s\n", Settings.BuffersExtendTo2021 ? "true" : "false");
+    dlog(" BuffersMovieMultiplier: %f\n", Settings.BuffersMovieMultiplier);
+    dlog("\n");
   }
 
   return true;
