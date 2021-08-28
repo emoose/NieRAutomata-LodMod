@@ -94,7 +94,7 @@ uint32_t Settings_FindLargestMovie(const std::filesystem::path& path)
   {
     if (entry.is_directory())
       continue;
-    if (entry.path().extension() != ".usm")
+    if (entry.path().extension().compare(".usm") != 0)
       continue;
 
     std::ifstream stream(entry.path(), std::ios::binary);

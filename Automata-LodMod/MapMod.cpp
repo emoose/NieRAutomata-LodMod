@@ -375,7 +375,7 @@ void MapMod_Init()
 
   // Expand MovieFile/MovieVram buffers, the root heaps for them will be updated in hook above
   // (allows videos above 1080 to play reliably)
-  size_MovieFileNew = float(size_MovieFileDefault) * Settings.BuffersMovieMultiplier;
+  size_MovieFileNew = uint32_t(float(size_MovieFileDefault) * Settings.BuffersMovieMultiplier);
   uint32_t size_MovieFile = *GameAddress<uint32_t*>(MovieFileHeapSize_Addr);
   if (size_MovieFileNew > size_MovieFile)
   {
@@ -385,7 +385,7 @@ void MapMod_Init()
     SafeWrite(GameAddress(MovieFileHeapSize_Addr), size_MovieFileNew);
   }
 
-  size_MovieVramNew = float(size_MovieVramDefault) * Settings.BuffersMovieMultiplier;
+  size_MovieVramNew = uint32_t(float(size_MovieVramDefault) * Settings.BuffersMovieMultiplier);
   uint32_t size_MovieVram = *GameAddress<uint32_t*>(MovieVramHeapSize_Addr);
   if (size_MovieVramNew > size_MovieVram)
   {

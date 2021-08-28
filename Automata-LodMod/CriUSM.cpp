@@ -1,9 +1,12 @@
 #include "pch.h"
 
-void CriUtfFieldDesc::read(std::ifstream& stream)
+bool CriUtfFieldDesc::read(std::ifstream& stream)
 {
 	stream.read((char*)&header, sizeof(header));
 	header.bswap();
+
+	if (header.name_offset >= string_table_size)
+		return false; // invalid name offset
 
 	name = string_table + header.name_offset;
 
@@ -29,18 +32,23 @@ void CriUtfFieldDesc::read(std::ifstream& stream)
 		case CriFieldType::kDouble:
 			stream.read((char*)&value_u64, sizeof(value_u64));
 			break;
-
 		case CriFieldType::kString:
 			uint32_t string_offset;
 			stream.read((char*)&string_offset, sizeof(string_offset));
+
 			string_offset = _byteswap_ulong(string_offset);
+			if (string_offset >= string_table_size)
+				return false;
+
 			value_string = string_table + string_offset;
 			break;
 		}
 	}
+
+	return !stream.fail();
 }
 
-void CriUtfField::read(std::ifstream& stream)
+bool CriUtfField::read(std::ifstream& stream)
 {
 	if (field_info->header.type.isConstant)
 	{
@@ -94,7 +102,11 @@ void CriUtfField::read(std::ifstream& stream)
 		case CriFieldType::kString:
 			uint32_t string_offset;
 			stream.read((char*)&string_offset, sizeof(string_offset));
+
 			string_offset = _byteswap_ulong(string_offset);
+			if (string_offset >= string_table_size)
+				return false;
+
 			value_string = string_table + string_offset;
 			break;
 		}
@@ -103,16 +115,22 @@ void CriUtfField::read(std::ifstream& stream)
 	value_u16 = _byteswap_ushort(value_u16);
 	value_u32 = _byteswap_ulong(value_u32);
 	value_u64 = _byteswap_uint64(value_u64);
+
+	return !stream.fail();
 }
 
-void CriUtfRow::read(std::ifstream& stream)
+bool CriUtfRow::read(std::ifstream& stream)
 {
 	for (auto& field_info : *field_infos)
 	{
-		CriUtfField field(&field_info, string_table);
-		field.read(stream);
+		CriUtfField field(&field_info, string_table, string_table_size);
+		if (!field.read(stream))
+			return false;
+
 		fields.push_back(field);
 	}
+
+	return true;
 }
 
 bool CriUtfRow::get_u8(std::string_view field_name, uint8_t& result)
@@ -189,35 +207,60 @@ CriUtf::~CriUtf()
 	}
 }
 
-void CriUtf::read(std::ifstream& stream)
+bool CriUtf::read(std::ifstream& stream, const std::streampos& block_end)
 {
 	auto pos = stream.tellg();
 	stream.read((char*)&header, sizeof(header));
+	if (stream.fail())
+		return false;
+
 	header.bswap();
+
+	if (header.magic != 0x40555446)
+		return false;
+
+	auto end_pos = pos;
+	end_pos += 8;
+	end_pos += header.table_size;
 
 	uint32_t strings_size = header.data_offset - header.strings_table_offset - 8;
 	string_table = (char*)malloc(strings_size);
-
-	for (int i = 0; i < header.num_columns; i++)
-	{
-		CriUtfFieldDesc info(string_table);
-		info.read(stream);
-		field_info.push_back(info);
-	}
-
-	for (int i = 0; i < header.num_rows; i++)
-	{
-		CriUtfRow row(&field_info, string_table);
-		row.read(stream);
-		rows.push_back(row);
-	}
 
 	auto strings_pos = pos;
 	strings_pos += 8; // block id/size
 	strings_pos += header.strings_table_offset;
 
+	if (strings_pos >= end_pos || stream.tellg() >= block_end)
+		return false;
+
+	for (int i = 0; i < header.num_columns; i++)
+	{
+		if (stream.tellg() >= end_pos || stream.tellg() >= block_end)
+			return false; // too many columns
+
+		CriUtfFieldDesc info(string_table, strings_size);
+		if (!info.read(stream))
+			return false;
+
+		field_info.push_back(info);
+	}
+
+	for (uint32_t i = 0; i < header.num_rows; i++)
+	{
+		if (stream.tellg() >= end_pos || stream.tellg() >= block_end)
+			return false; // too many rows
+
+		CriUtfRow row(&field_info, string_table, strings_size);
+		if (!row.read(stream))
+			return false;
+
+		rows.push_back(row);
+	}
+
 	stream.seekg(strings_pos);
 	stream.read(string_table, strings_size);
+
+	return !stream.fail();
 }
 
 bool CriUtf::get_row(int row_idx, CriUtfRow** result)
@@ -234,17 +277,26 @@ bool CriUtf::get_row(int row_idx, CriUtfRow** result)
 bool CriUsm::read(std::ifstream& stream)
 {
 	bool found_crid = false;
-	while (true)
+	while (!stream.eof())
 	{
 		auto pos = stream.tellg();
+
 		CriUsmChunkHeader chunk_header;
 		stream.read((char*)&chunk_header, sizeof(chunk_header));
+		if (stream.fail())
+			return false;
+
 		chunk_header.bswap();
+
+		auto end_pos = pos;
+		end_pos += 8;
+		end_pos += chunk_header.block_size;
 
 		if (chunk_header.stmid == 0x43524944) // CRID
 		{
 			crid_header = chunk_header;
-			// crid_utf.read(stream); - skip crid UTF reading, don't really care about that right now
+			// if (!crid_utf.read(stream, end_pos)) - skip crid UTF reading, don't really care about that right now
+			//	return false;
 			found_crid = true;
 		}
 		else
@@ -255,10 +307,11 @@ bool CriUsm::read(std::ifstream& stream)
 				return false;
 			}
 
-			if (chunk_header.stmid == 0x40534656) // @SFV
+			if (chunk_header.stmid == 0x40534656 && chunk_header.block_type == 1) // @SFV
 			{
 				sfv_header = chunk_header;
-				sfv_utf.read(stream);
+				if (!sfv_utf.read(stream, end_pos))
+					return false;
 
 				break; // only need to read one of these for our needs
 			}
@@ -268,23 +321,26 @@ bool CriUsm::read(std::ifstream& stream)
 		pos += chunk_header.block_size;
 
 		stream.seekg(pos);
+
+		if (stream.fail())
+			return false;
 	}
+
+	return true;
 }
 
 bool CriUsm::get_width(uint32_t& result, bool disp_width, int row_idx)
 {
 	CriUtfRow* row;
-	bool res = sfv_utf.get_row(row_idx, &row);
-	if (!res)
-		return res;
+	if (!sfv_utf.get_row(row_idx, &row))
+		return false;
 	return row->get_u32(disp_width ? "disp_width" : "width", result);
 }
 
 bool CriUsm::get_height(uint32_t& result, bool disp_height, int row_idx)
 {
 	CriUtfRow* row;
-	bool res = sfv_utf.get_row(row_idx, &row);
-	if (!res)
-		return res;
+	if (!sfv_utf.get_row(row_idx, &row))
+		return false;
 	return row->get_u32(disp_height ? "disp_height" : "height", result);
 }

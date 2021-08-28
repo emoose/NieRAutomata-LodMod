@@ -81,8 +81,11 @@ struct CriUtfFieldDescHdr
 class CriUtfFieldDesc
 {
 	char* string_table;
+	uint32_t string_table_size;
+
 public:
-	CriUtfFieldDesc(char* string_table) : string_table(string_table) {}
+	CriUtfFieldDesc(char* string_table, uint32_t string_table_size) : 
+		string_table(string_table), string_table_size(string_table_size) {}
 
 	CriUtfFieldDescHdr header;
 	char* name = nullptr;
@@ -93,13 +96,14 @@ public:
 	uint64_t value_u64;
 	char* value_string;
 
-	void read(std::ifstream& stream);
+	bool read(std::ifstream& stream);
 };
 
 class CriUtfField
 {
 	CriUtfFieldDesc* field_info;
 	char* string_table;
+	uint32_t string_table_size;
 
 public:
 	uint8_t value_u8;
@@ -112,26 +116,28 @@ public:
 	{
 		if (field_info)
 			return field_info->name;
+		return nullptr;
 	}
 
-	CriUtfField(CriUtfFieldDesc* info, char* string_table) :
-		field_info(info), string_table(string_table) {}
+	CriUtfField(CriUtfFieldDesc* info, char* string_table, uint32_t string_table_size) :
+		field_info(info), string_table(string_table), string_table_size(string_table_size) {}
 
-	void read(std::ifstream& stream);
+	bool read(std::ifstream& stream);
 };
 
 class CriUtfRow
 {
 	std::vector<CriUtfFieldDesc>* field_infos;
 	char* string_table;
+	uint32_t string_table_size;
 
 	std::vector<CriUtfField> fields;
 
 public:
-	CriUtfRow(std::vector<CriUtfFieldDesc>* info, char* string_table) :
-		field_infos(info), string_table(string_table) {}
+	CriUtfRow(std::vector<CriUtfFieldDesc>* info, char* string_table, uint32_t string_table_size) :
+		field_infos(info), string_table(string_table), string_table_size(string_table_size) {}
 
-	void read(std::ifstream& stream);
+	bool read(std::ifstream& stream);
 
 	bool get_u8(std::string_view field_name, uint8_t& result);
 	bool get_u16(std::string_view field_name, uint16_t& result);
@@ -149,7 +155,7 @@ class CriUtf
 	std::vector<CriUtfRow> rows;
 public:
 	~CriUtf();
-	void read(std::ifstream& stream);
+	bool read(std::ifstream& stream, const std::streampos& block_end);
 
 	bool get_row(int row_idx, CriUtfRow** result);
 };
@@ -185,7 +191,7 @@ class CriUsm
 {
 public:
 	CriUsmChunkHeader crid_header;
-	CriUtf crid_utf;
+	// CriUtf crid_utf; - skipped crid UTF read
 
 	CriUsmChunkHeader sfv_header;
 	CriUtf sfv_utf;
