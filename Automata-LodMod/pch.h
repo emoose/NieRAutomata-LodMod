@@ -23,6 +23,7 @@
 #include "MinHook/MinHook.h"
 
 #include "SDK.h"
+#include "CriUSM.h"
 
 // dllmain.cpp
 extern HMODULE DllHModule;
@@ -128,7 +129,7 @@ void SafeWrite(uintptr_t address, T value, int count)
 {
   DWORD oldProtect = 0;
   VirtualProtect((LPVOID)address, sizeof(T) * count, PAGE_READWRITE, &oldProtect);
-  for(int i = 0; i < count; i++)
+  for (int i = 0; i < count; i++)
     *reinterpret_cast<T*>(address + (sizeof(T) * i)) = value;
   VirtualProtect((LPVOID)address, sizeof(T) * count, oldProtect, &oldProtect);
 }

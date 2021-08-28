@@ -118,8 +118,8 @@ void BehaviorScr::SetCastShadows(bool castsShadows)
 #endif
 
             auto& filters = ShadowForceAllFilters[areaId];
-            for(auto& filter : filters)
-              if(!_stricmp(filter.c_str(), *modelName))
+            for (auto& filter : filters)
+              if (!_stricmp(filter.c_str(), *modelName))
                 shadowInfo->Flags &= ~1;
 
             //if (!strcmp(*modelName, "ENKEI") || (areaIdCoords == 0x1118 && !strcmp(*modelName, "GROUND_g11118jimen")))
@@ -349,7 +349,7 @@ void ShadowFixes_Init()
   MH_CreateHook(GameAddress<LPVOID>(cBinaryXml__Read_Addr), cBinaryXml__Read_Hook, (LPVOID*)&cBinaryXml__Read_Orig);
 
 #ifdef _DEBUG
-  if(version != GameVersion::Steam2017) // ShadowDistanceReader func is weird in steam2017
+  if (version != GameVersion::Steam2017) // ShadowDistanceReader func is weird in steam2017
     MH_CreateHook(GameAddress<LPVOID>(ShadowDistanceReaderAddr), ShadowDistanceReader_Hook, (LPVOID*)&ShadowDistanceReader_Orig);
 #endif
 

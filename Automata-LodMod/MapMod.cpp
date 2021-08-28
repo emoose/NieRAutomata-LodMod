@@ -368,7 +368,7 @@ void MapMod_Init()
     Settings.HQMapSlots = MAX_LOD_SLOTS;
 
   // Hook root heap init func so we can increase buffers past 32-bits
-  if(version == GameVersion::Steam2017 || version == GameVersion::Debug2017)
+  if (version == GameVersion::Steam2017 || version == GameVersion::Debug2017)
     MH_CreateHook(GameAddress<LPVOID>(cMemoryDeviceBase__createHeap_Addr), cMemoryDeviceBase__createHeap_2017_Hook, (LPVOID*)&cMemoryDeviceBase__createHeap_2017_Orig);
   else
     MH_CreateHook(GameAddress<LPVOID>(cMemoryDeviceBase__createHeap_Addr), cMemoryDeviceBase__createHeap_Hook, (LPVOID*)&cMemoryDeviceBase__createHeap_Orig);

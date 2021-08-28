@@ -267,6 +267,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CriUSM.h" />
     <ClInclude Include="MinHook\buffer.h" />
     <ClInclude Include="MinHook\hde\hde32.h" />
     <ClInclude Include="MinHook\hde\hde64.h" />
@@ -281,6 +282,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AOFixes.cpp" />
+    <ClCompile Include="CriUSM.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="MapMod.cpp" />
     <ClCompile Include="MinHook\hde\hde32.c">

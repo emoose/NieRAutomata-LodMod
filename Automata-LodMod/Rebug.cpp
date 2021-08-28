@@ -137,7 +137,7 @@ void* Model_ShouldBeCulled_Hook(uint64_t area_id_full, char* model_name)
 
   // checks if we should forcibly cull this model (return true) instead of passing it to Model_ShouldBeCulled_Orig
 #ifdef _DEBUG
-  if(lower_name != "ground")
+  if (lower_name != "ground")
 #endif
     if (ShouldForceCull(area_id, lower_name))
       return (void*)1;

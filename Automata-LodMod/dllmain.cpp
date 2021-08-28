@@ -4,7 +4,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.76.4"
+#define LODMOD_VERSION "0.76.5"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
@@ -38,7 +38,7 @@ LodModSettings Settings = {
   .CommunicationScreenResolution = 256,
   .HQMapSlots = 7,
   .WrapperLoadLibrary = { 0 },
-  .BuffersMovieMultiplier = 1,
+  .BuffersMovieMultiplier = -1,
   .BuffersExtendTo2021 = true
 };
 
@@ -48,6 +48,8 @@ WCHAR ModuleName[4096];
 WCHAR IniDir[4096];
 WCHAR IniPath[4096];
 WCHAR LogPath[4096];
+WCHAR GameDir[4096] = { 0 };
+bool GotGameDir = false;
 
 #ifdef _DEBUG
 HANDLE hIniUpdateThread;
@@ -79,6 +81,62 @@ bool GetSaveFolder(wchar_t* destBuf, size_t sizeInBytes)
   return result;
 }
 
+uint32_t Settings_FindLargestMovie(const std::filesystem::path& path)
+{
+  if (!DirExists(path.wstring().c_str()) || FileExists(path.wstring().c_str()))
+    return 0;
+
+  uint32_t largest = 0;
+  dlog("Scanning %S for USM movie files...\n", path.wstring().c_str());
+
+  int read = 0;
+  for (const auto& entry : std::filesystem::directory_iterator(path))
+  {
+    if (entry.is_directory())
+      continue;
+    if (entry.path().extension() != ".usm")
+      continue;
+
+    std::ifstream stream(entry.path(), std::ios::binary);
+    if (!stream.is_open())
+      continue;
+
+    CriUsm movie_usm;
+    bool res = movie_usm.read(stream);
+    stream.close();
+
+    if (!res)
+      continue;
+
+    // Multiply width x height to find number of pixels
+    // TODO: finding what criManaPlayer_CalculatePlaybackWorkSize would return for the file would be better
+    // (mem buffer is based on result from there)
+    uint32_t width;
+    uint32_t height;
+
+    bool has_read = false;
+    if (movie_usm.get_width(width) && movie_usm.get_height(height))
+    {
+      has_read = true;
+      uint32_t num_px = width * height;
+      if (num_px > largest)
+        largest = num_px;
+    }
+    if (movie_usm.get_width(width, true) && movie_usm.get_height(height, true))
+    {
+      has_read = true;
+      uint32_t num_px = width * height;
+      if (num_px > largest)
+        largest = num_px;
+    }
+    if (has_read)
+      read++;
+  }
+
+  dlog("Parsed %d USM movies\n", read);
+  return largest;
+}
+
 void Settings_ReadINI(const WCHAR* iniPath)
 {
   if (!FileExists(iniPath))
@@ -88,6 +146,21 @@ void Settings_ReadINI(const WCHAR* iniPath)
     GetPrivateProfileStringW(L"Wrapper", L"LoadLibrary", L"", origModulePath, 4096, iniPath);
 
   Settings.DebugLog = INI_GetBool(iniPath, L"LodMod", L"DebugLog", Settings.DebugLog);
+
+  static bool printedHeader = false;
+  if (Settings.DebugLog && !printedHeader)
+  {
+    dlog("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
+    if (GetModuleName(DllHModule, ModuleName, 4096))
+      dlog("LodMod module name: %S\n", ModuleName);
+
+    dlog("Detected game type: %s\n", GameVersionName[int(version)]);
+    dlog("Wrapping DLL from %S\n", wcslen(origModulePath) > 0 ? origModulePath : L"system folder");
+    dlog("Reading INI from %S...\n", IniPath);
+
+    printedHeader = true;
+  }
+
   Settings.LODMultiplier = INI_GetFloat(iniPath, L"LodMod", L"LODMultiplier", Settings.LODMultiplier);
   Settings.AOMultiplierWidth = INI_GetFloat(iniPath, L"LodMod", L"AOMultiplierWidth", Settings.AOMultiplierWidth);
   Settings.AOMultiplierHeight = INI_GetFloat(iniPath, L"LodMod", L"AOMultiplierHeight", Settings.AOMultiplierHeight);
@@ -130,6 +203,31 @@ void Settings_ReadINI(const WCHAR* iniPath)
   // Only allow AO multiplier from 0.1-2 (higher than 2 adds artifacts...)
   Settings.AOMultiplierWidth = fmaxf(fminf(Settings.AOMultiplierWidth, 2), 0.1f);
   Settings.AOMultiplierHeight = fmaxf(fminf(Settings.AOMultiplierHeight, 2), 0.1f);
+
+  if (Settings.BuffersMovieMultiplier <= 0)
+  {
+    // Settings.BuffersMovieMultiplier is 0 or below, lets have LodMod decide!
+    dlog("\n");
+    if (!GotGameDir)
+    {
+      dlog("!!! BuffersMovieMultiplier asked LodMod to work out size, but we haven't found GameDir for some reason!\n");
+      Settings.BuffersMovieMultiplier = 1;
+    }
+    else
+    {
+      // Analyze movie files & find the largest, use it to find default Settings.BufferMovieMultiplier
+      uint32_t movie_size = Settings_FindLargestMovie(std::filesystem::path(GameDir) / "data" / "movie");
+      uint32_t logo_size = Settings_FindLargestMovie(std::filesystem::path(GameDir) / "data" / "movie_logo");
+
+      if (logo_size > movie_size)
+        movie_size = logo_size;
+
+      float multiplier = float(movie_size) / (1920 * 1080);
+      Settings.BuffersMovieMultiplier = ceil(multiplier);
+
+      dlog("Largest movie size is %d pixels, MovieMultiplier set to %f\n", movie_size, Settings.BuffersMovieMultiplier);
+    }
+  }
 
   Settings.BuffersMovieMultiplier = fmaxf(Settings.BuffersMovieMultiplier, 1.f);
 
@@ -303,19 +401,18 @@ bool InitPlugin()
     return false;
 
   // Try loading config INI:
-  WCHAR GameDir[4096] = { 0 };
   memset(IniDir, 0, 4096 * sizeof(WCHAR));
   memset(IniPath, 0, 4096 * sizeof(WCHAR));
   memset(LogPath, 0, 4096 * sizeof(WCHAR));
 
-  bool gotGameDir = GetModuleFolder(GameHModule, GameDir, 4096);
+  GotGameDir = GetModuleFolder(GameHModule, GameDir, 4096);
 
   // Check for INI inside LodMod DLLs folder first
   if (GetModuleFolder(DllHModule, GameDir, 4096))
     swprintf_s(IniPath, L"%sLodMod.ini", GameDir);
 
   // Doesn't exist in DLL folder? try game EXE folder
-  if (!FileExists(IniPath) && gotGameDir)
+  if (!FileExists(IniPath) && GotGameDir)
   {
     wcscpy_s(IniDir, GameDir);
     swprintf_s(IniPath, L"%sLodMod.ini", GameDir);
@@ -331,20 +428,9 @@ bool InitPlugin()
       swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
   }
 
+  swprintf_s(LogPath, L"%sLodMod.log", IniDir);
+
   Settings_ReadINI(IniPath);
-
-  if (Settings.DebugLog)
-  {
-    swprintf_s(LogPath, L"%sLodMod.log", IniDir);
-
-    dlog("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
-    if (GetModuleName(DllHModule, ModuleName, 4096))
-      dlog("LodMod module name: %S\n", ModuleName);
-
-    dlog("Detected game type: %s\n", GameVersionName[int(version)]);
-    dlog("Wrapping DLL from %S\n", wcslen(origModulePath) > 0 ? origModulePath : L"system folder");
-    dlog("Reading INI from %S...\n", IniPath);
-  }
 
   // Load any extra INIs inside game folders
   Settings_LoadAllFromPath(GameDir);
