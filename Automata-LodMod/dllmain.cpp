@@ -115,14 +115,21 @@ uint32_t Settings_FindLargestMovie(const std::filesystem::path& path)
     uint32_t height;
 
     bool has_read = false;
-    if (movie_usm.get_width(width) && movie_usm.get_height(height))
+    if (movie_usm.get_u32("width", width) && movie_usm.get_u32("height", height))
     {
       has_read = true;
       uint32_t num_px = width * height;
       if (num_px > largest)
         largest = num_px;
     }
-    if (movie_usm.get_width(width, true) && movie_usm.get_height(height, true))
+    if (movie_usm.get_u32("mat_width", width) && movie_usm.get_u32("mat_height", height))
+    {
+      has_read = true;
+      uint32_t num_px = width * height;
+      if (num_px > largest)
+        largest = num_px;
+    }
+    if (movie_usm.get_u32("disp_width", width) && movie_usm.get_u32("disp_height", height))
     {
       has_read = true;
       uint32_t num_px = width * height;

@@ -2,8 +2,12 @@
 
 // Simple USM parser so we can get at the movie width/height
 // UTF parsing is incomplete, needs GUID & variable-length data support
-// Will only work with files where 2nd chunk is a block_type 1 @SFV part
+// Will likely only work well with files where 2nd chunk is a block_type 1 @SFV part
 #pragma pack(push, 1)
+
+#define MAGIC_CRID 0x43524944
+#define MAGIC_SFV  0x40534656 // @SFV
+#define MAGIC_UTF  0x40555446 // @UTF
 
 struct CriUtfHeader
 {
@@ -80,21 +84,14 @@ struct CriUtfFieldDescHdr
 
 class CriUtfFieldDesc
 {
-	char* string_table;
-	uint32_t string_table_size;
-
 public:
-	CriUtfFieldDesc(char* string_table, uint32_t string_table_size) : 
-		string_table(string_table), string_table_size(string_table_size) {}
-
 	CriUtfFieldDescHdr header;
-	char* name = nullptr;
+	std::string name;
 
-	uint8_t value_u8;
-	uint16_t value_u16;
-	uint32_t value_u32;
-	uint64_t value_u64;
-	char* value_string;
+	uint8_t constant_u8;
+	uint16_t constant_u16;
+	uint32_t constant_u32;
+	uint64_t constant_u64;
 
 	bool read(std::ifstream& stream);
 };
@@ -102,25 +99,30 @@ public:
 class CriUtfField
 {
 	CriUtfFieldDesc* field_info;
-	char* string_table;
-	uint32_t string_table_size;
 
 public:
 	uint8_t value_u8;
 	uint16_t value_u16;
 	uint32_t value_u32;
 	uint64_t value_u64;
-	char* value_string;
 
-	const char* name()
+	std::string value_string;
+
+	CriFieldType type()
+	{
+		if (field_info)
+			return field_info->header.type.type;
+		return CriFieldType::kUint8;
+	}
+
+	std::string name()
 	{
 		if (field_info)
 			return field_info->name;
-		return nullptr;
+		return "";
 	}
 
-	CriUtfField(CriUtfFieldDesc* info, char* string_table, uint32_t string_table_size) :
-		field_info(info), string_table(string_table), string_table_size(string_table_size) {}
+	CriUtfField(CriUtfFieldDesc* info) : field_info(info) {}
 
 	bool read(std::ifstream& stream);
 };
@@ -128,16 +130,14 @@ public:
 class CriUtfRow
 {
 	std::vector<CriUtfFieldDesc>* field_infos;
-	char* string_table;
-	uint32_t string_table_size;
 
 	std::vector<CriUtfField> fields;
 
 public:
-	CriUtfRow(std::vector<CriUtfFieldDesc>* info, char* string_table, uint32_t string_table_size) :
-		field_infos(info), string_table(string_table), string_table_size(string_table_size) {}
+	CriUtfRow(std::vector<CriUtfFieldDesc>* info) : field_infos(info) {}
 
 	bool read(std::ifstream& stream);
+	bool read_strings(char* string_table, uint32_t string_table_size);
 
 	bool get_u8(std::string_view field_name, uint8_t& result);
 	bool get_u16(std::string_view field_name, uint16_t& result);
@@ -187,18 +187,18 @@ struct CriUsmChunkHeader
 		udata = _byteswap_ulong(udata);
 	}
 };
+
 class CriUsm
 {
 public:
 	CriUsmChunkHeader crid_header;
-	// CriUtf crid_utf; - skipped crid UTF read
+	CriUtf crid_utf;
 
 	CriUsmChunkHeader sfv_header;
 	CriUtf sfv_utf;
 
 	bool read(std::ifstream& stream);
 
-	bool get_width(uint32_t& result, bool disp_width = false, int row_idx = 0);
-	bool get_height(uint32_t& result, bool disp_height = false, int row_idx = 0);
+	bool get_u32(std::string_view name, uint32_t& result, int row_idx = 0);
 };
 #pragma pack(pop)

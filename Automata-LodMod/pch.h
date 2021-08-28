@@ -145,19 +145,19 @@ void SafeWrite(uintptr_t address, T* value, int count)
 }
 
 template <typename T>
-void SafeWriteModule(uintptr_t offset, T value)
+inline void SafeWriteModule(uintptr_t offset, T value)
 {
   SafeWrite<T>(mBaseAddress + offset, value);
 }
 
 template <typename T>
-void SafeWriteModule(uintptr_t offset, T value, int count)
+inline void SafeWriteModule(uintptr_t offset, T value, int count)
 {
   SafeWrite<T>(mBaseAddress + offset, value, count);
 }
 
 template <typename T>
-void SafeWriteModule(uintptr_t offset, T* value, int count)
+inline void SafeWriteModule(uintptr_t offset, T* value, int count)
 {
   SafeWrite<T>(mBaseAddress + offset, value, count);
 }
@@ -167,4 +167,16 @@ template <typename T>
 inline void UnsafeWriteModule(uintptr_t offset, T value)
 {
   *reinterpret_cast<T*>(mBaseAddress + offset) = value;
+}
+
+template<typename T>
+inline std::istream& stream_read(std::ifstream& stream, T* dest)
+{
+  return stream.read((char*)dest, sizeof(T));
+}
+
+template<typename T>
+inline std::istream& stream_read(std::ifstream& stream, T* dest, size_t count)
+{
+  return stream.read((char*)dest, sizeof(T) * count);
 }
