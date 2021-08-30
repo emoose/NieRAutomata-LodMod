@@ -264,7 +264,7 @@ void Settings_LoadAllFromPath(const std::filesystem::path& path)
     auto iniEntry = entry.path() / L"LodMod.ini";
     auto iniEntryString = iniEntry.wstring();
     auto iniEntryData = iniEntryString.c_str();
-    if (FileExists(iniEntryData))
+    if (FileExists(iniEntryData) && _wcsicmp(iniEntryData, IniPath) != 0)
     {
       dlog("Reading INI from %S...\n", iniEntryData);
       Settings_ReadINI(iniEntryData);
@@ -415,8 +415,8 @@ bool InitPlugin()
   GotGameDir = GetModuleFolder(GameHModule, GameDir, 4096);
 
   // Check for INI inside LodMod DLLs folder first
-  if (GetModuleFolder(DllHModule, GameDir, 4096))
-    swprintf_s(IniPath, L"%sLodMod.ini", GameDir);
+  if (GetModuleFolder(DllHModule, IniDir, 4096))
+    swprintf_s(IniPath, L"%sLodMod.ini", IniDir);
 
   // Doesn't exist in DLL folder? try game EXE folder
   if (!FileExists(IniPath) && GotGameDir)

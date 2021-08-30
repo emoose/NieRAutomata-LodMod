@@ -132,7 +132,7 @@ bool CriUtfRow::read_strings(char* string_table, uint32_t string_table_size)
 
 bool CriUtfRow::get_u8(std::string_view field_name, uint8_t& result)
 {
-	for (auto field : fields)
+	for (auto& field : fields)
 	{
 		if (field.name() == field_name)
 		{
@@ -145,7 +145,7 @@ bool CriUtfRow::get_u8(std::string_view field_name, uint8_t& result)
 
 bool CriUtfRow::get_u16(std::string_view field_name, uint16_t& result)
 {
-	for (auto field : fields)
+	for (auto& field : fields)
 	{
 		if (field.name() == field_name)
 		{
@@ -158,7 +158,7 @@ bool CriUtfRow::get_u16(std::string_view field_name, uint16_t& result)
 
 bool CriUtfRow::get_u32(std::string_view field_name, uint32_t& result)
 {
-	for (auto field : fields)
+	for (auto& field : fields)
 	{
 		if (field.name() == field_name)
 		{
@@ -171,7 +171,7 @@ bool CriUtfRow::get_u32(std::string_view field_name, uint32_t& result)
 
 bool CriUtfRow::get_u64(std::string_view field_name, uint64_t& result)
 {
-	for (auto field : fields)
+	for (auto& field : fields)
 	{
 		if (field.name() == field_name)
 		{
@@ -184,7 +184,7 @@ bool CriUtfRow::get_u64(std::string_view field_name, uint64_t& result)
 
 bool CriUtfRow::get_string(std::string_view field_name, std::string& result)
 {
-	for (auto field : fields)
+	for (auto& field : fields)
 	{
 		if (field.name() == field_name)
 		{
