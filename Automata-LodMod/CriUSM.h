@@ -9,6 +9,14 @@
 #define MAGIC_SFV  0x40534656 // @SFV
 #define MAGIC_UTF  0x40555446 // @UTF
 
+enum class CriManaCodec : uint32_t
+{
+	Unknown = 0,
+	MPEG2 = 1,
+	H264 = 5,
+	VP9 = 9
+};
+
 struct CriUtfHeader
 {
 	/* 0x00 */ uint32_t magic;

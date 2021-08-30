@@ -95,10 +95,19 @@
     <ClCompile Include="CriUSM.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CriH264.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="proxy.def">
       <Filter>Source Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="criv264mft_lib.obj" />
+    <Object Include="crimana_decoder_h264_mft.obj" />
+    <Object Include="crimv_decoder_v264mft.obj" />
+    <Object Include="crimvply_decoder_v264mft.obj" />
   </ItemGroup>
 </Project>

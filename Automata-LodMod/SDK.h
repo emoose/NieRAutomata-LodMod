@@ -16,8 +16,10 @@ enum class GameVersion { // release date follows
 
 extern GameVersion version; // dllmain.cpp
 
+typedef void* (*fn_4args)(void* a1, void* a2, void* a3, void* a4);
 typedef void* (*fn_3args)(void* a1, void* a2, void* a3);
 typedef void* (*fn_2args)(void* a1, void* a2);
+typedef void* (*fn_1args)(void* a1);
 typedef void* (*fn_0args)();
 
 #pragma pack(push, 1)

@@ -4,7 +4,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.76.5"
+#define LODMOD_VERSION "0.77.0"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
@@ -39,7 +39,9 @@ LodModSettings Settings = {
   .HQMapSlots = 7,
   .WrapperLoadLibrary = { 0 },
   .BuffersMovieMultiplier = -1,
-  .BuffersExtendTo2021 = true
+  .BuffersExtendTo2021 = true,
+  .MoviesEnableH264 = -1,
+  .MoviesEncryptionKey = 0,
 };
 
 GameVersion version; // which GameVersion we're injected into
@@ -108,6 +110,18 @@ uint32_t Settings_FindLargestMovie(const std::filesystem::path& path)
     if (!res)
       continue;
 
+    // If user set EnableH264 to negative number, we'll set it based on the movies codec
+    uint32_t codec_raw;
+    if (movie_usm.get_u32("mpeg_codec", codec_raw))
+    {
+      if (Settings.MoviesEnableH264 < 0)
+      {
+        CriManaCodec codec = static_cast<CriManaCodec>(codec_raw);
+        if (codec == CriManaCodec::H264)
+          Settings.MoviesEnableH264 = 1;
+      }
+    }
+
     // Multiply width x height to find number of pixels
     // TODO: finding what criManaPlayer_CalculatePlaybackWorkSize would return for the file would be better
     // (mem buffer is based on result from there)
@@ -115,6 +129,7 @@ uint32_t Settings_FindLargestMovie(const std::filesystem::path& path)
     uint32_t height;
 
     bool has_read = false;
+
     if (movie_usm.get_u32("width", width) && movie_usm.get_u32("height", height))
     {
       has_read = true;
@@ -185,6 +200,16 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.ShadowModelForceAll = INI_GetBool(iniPath, L"LodMod", L"ShadowModelForceAll", Settings.ShadowModelForceAll);
   Settings.BuffersMovieMultiplier = INI_GetFloat(iniPath, L"Buffers", L"MovieMultiplier", Settings.BuffersMovieMultiplier);
   Settings.BuffersExtendTo2021 = INI_GetBool(iniPath, L"Buffers", L"ExtendTo2021", Settings.BuffersExtendTo2021);
+  Settings.MoviesEnableH264 = GetPrivateProfileIntW(L"Movies", L"EnableH264", Settings.MoviesEnableH264, iniPath);
+
+  WCHAR encryptionKey[256];
+  int sz = sizeof(encryptionKey);
+  if (GetPrivateProfileStringW(L"Movies", L"EncryptionKey", L"0", encryptionKey, sizeof(encryptionKey), iniPath))
+  {
+    uint64_t value = std::stoull(encryptionKey, nullptr, 0);
+    if (value != 0)
+      Settings.MoviesEncryptionKey = value;
+  }
 
   // Old INI keynames...
   {
@@ -211,7 +236,7 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.AOMultiplierWidth = fmaxf(fminf(Settings.AOMultiplierWidth, 2), 0.1f);
   Settings.AOMultiplierHeight = fmaxf(fminf(Settings.AOMultiplierHeight, 2), 0.1f);
 
-  if (Settings.BuffersMovieMultiplier <= 0)
+  if (Settings.BuffersMovieMultiplier <= 0 || Settings.MoviesEnableH264 < 0)
   {
     // Settings.BuffersMovieMultiplier is 0 or below, lets have LodMod decide!
     dlog("\n");
@@ -223,16 +248,20 @@ void Settings_ReadINI(const WCHAR* iniPath)
     else
     {
       // Analyze movie files & find the largest, use it to find default Settings.BufferMovieMultiplier
+      // (will also check codecs and set MovieEnableH264 if required)
       uint32_t movie_size = Settings_FindLargestMovie(std::filesystem::path(GameDir) / "data" / "movie");
       uint32_t logo_size = Settings_FindLargestMovie(std::filesystem::path(GameDir) / "data" / "movie_logo");
 
-      if (logo_size > movie_size)
-        movie_size = logo_size;
+      if (Settings.BuffersMovieMultiplier <= 0)
+      {
+        if (logo_size > movie_size)
+          movie_size = logo_size;
 
-      float multiplier = float(movie_size) / (1920 * 1080);
-      Settings.BuffersMovieMultiplier = ceil(multiplier);
+        float multiplier = float(movie_size) / (1920 * 1080);
+        Settings.BuffersMovieMultiplier = ceil(multiplier);
 
-      dlog("Largest movie size is %d pixels, MovieMultiplier set to %f\n", movie_size, Settings.BuffersMovieMultiplier);
+        dlog("Largest movie size is %d pixels, MovieMultiplier set to %f\n", movie_size, Settings.BuffersMovieMultiplier);
+      }
     }
   }
 
@@ -340,6 +369,7 @@ void LodMod_Init()
 
   MH_Initialize();
 
+  CriH264_Init();
   ShadowFixes_Init();
   AOFixes_Init();
   Rebug_Init();
@@ -460,6 +490,8 @@ bool InitPlugin()
     dlog(" HQMapSlots: %d\n", Settings.HQMapSlots);
     dlog(" BuffersExtendTo2021: %s\n", Settings.BuffersExtendTo2021 ? "true" : "false");
     dlog(" BuffersMovieMultiplier: %f\n", Settings.BuffersMovieMultiplier);
+    dlog(" MoviesEnableH264: %d\n", Settings.MoviesEnableH264);
+    dlog(" MoviesEncryptionKey: 0x%llX\n", Settings.MoviesEncryptionKey);
     dlog("\n");
   }
 

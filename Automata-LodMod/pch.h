@@ -83,14 +83,18 @@ struct LodModSettings
   int CommunicationScreenResolution;
   int HQMapSlots;
   WCHAR WrapperLoadLibrary[4096];
-
   float BuffersMovieMultiplier;
   bool BuffersExtendTo2021;
+  int MoviesEnableH264;
+  uint64_t MoviesEncryptionKey;
 };
 extern LodModSettings Settings;
 extern uintptr_t mBaseAddress;
 extern WCHAR LogPath[4096];
 extern WCHAR IniPath[4096];
+
+// CriH264.cpp
+void CriH264_Init();
 
 // MapMod.cpp
 extern bool g11420IsLoaded;

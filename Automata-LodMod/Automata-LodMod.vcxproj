@@ -145,6 +145,7 @@
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
+      <AdditionalDependencies>Mfplat.lib;mfuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"
@@ -173,6 +174,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
       <ModuleDefinitionFile>proxy.def</ModuleDefinitionFile>
       <OutputFile>$(OutDir)xinput1_4$(TargetExt)</OutputFile>
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>Mfplat.lib;mfuuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\common\NieRAutomata\xinput1_4.dll"
@@ -195,6 +197,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AOFixes.cpp" />
+    <ClCompile Include="CriH264.cpp" />
     <ClCompile Include="CriUSM.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="MapMod.cpp" />
@@ -223,6 +226,12 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
   </ItemGroup>
   <ItemGroup>
     <None Include="proxy.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="crimana_decoder_h264_mft.obj" />
+    <Object Include="crimvply_decoder_v264mft.obj" />
+    <Object Include="crimv_decoder_v264mft.obj" />
+    <Object Include="criv264mft_lib.obj" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
