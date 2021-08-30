@@ -15,7 +15,7 @@ const uint32_t s_default_decryptionkey_Addr[] = { 0x14C86A8, 0x14BB598, 0x154B46
 // Wrappers for the funcs called by those obj files, make them call equivalent funcs in game EXE
 
 #ifdef CRI_H264_SUPPORT
-typedef enum CriError;
+enum CriError;
 namespace CriMv {
   CriError ErrorContainer;
 };
@@ -97,7 +97,7 @@ void* criMvPly_AttachCodec(void* a1)
 
 void* criSjUni_CalculateWorkSize(void* a1)
 {
-  const uint32_t addr[] = { 0xA35D4, 0xA35D4, 0xA3644, 0xC6F2DC, 0x1523768 };
+  const uint32_t addr[] = { 0xA35D4, 0xA35D4, 0xA3644, 0xC6F744, 0x1523C24 };
 
   auto ret = GameAddress<fn_1args>(addr)(a1);
 
@@ -176,28 +176,19 @@ int criUsfCmn_GetHeaderSize(uint8_t* a1, uint32_t a2, uint8_t* a3)
     *a3 = *(a1 + 9);
     return 1;
   }
-  else
-  {
-    *a3 = 0;
-    return 0;
-  }
+  *a3 = 0;
+  return 0;
 }
 
 int criUsfCmn_GetPaddingSize(uint8_t* a1, uint32_t a2, uint16_t* a3)
 {
-  __int64 result; // rax
-
   if (a2 >= 0x10)
   {
     *a3 = _byteswap_ushort(*(uint16_t*)(a1 + 0xA));
     return 1;
   }
-  else
-  {
-    *a3 = 0;
-    return 0;
-  }
-  return result;
+  *a3 = 0;
+  return 0;
 }
 
 void* criUsfCmn_ParseUsfHeaderStd(void* a1, void* a2, void* a3)
