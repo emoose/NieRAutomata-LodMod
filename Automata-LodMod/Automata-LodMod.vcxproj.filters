@@ -98,7 +98,7 @@
     <ClCompile Include="CriH264.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CriH264_wrapped.cpp">
+    <ClCompile Include="CriH264_wrappers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

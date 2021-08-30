@@ -198,7 +198,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
   <ItemGroup>
     <ClCompile Include="AOFixes.cpp" />
     <ClCompile Include="CriH264.cpp" />
-    <ClCompile Include="CriH264_wrapped.cpp" />
+    <ClCompile Include="CriH264_wrappers.cpp" />
     <ClCompile Include="CriUSM.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="MapMod.cpp" />
