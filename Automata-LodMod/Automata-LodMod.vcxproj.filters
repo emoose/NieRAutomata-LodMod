@@ -98,6 +98,9 @@
     <ClCompile Include="CriH264.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CriH264_wrapped.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="proxy.def">
