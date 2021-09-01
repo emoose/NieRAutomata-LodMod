@@ -194,6 +194,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
     <ClInclude Include="pch.h" />
     <ClInclude Include="SDK.h" />
     <ClInclude Include="SDKEnums.h" />
+    <ClInclude Include="sjis_table.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AOFixes.cpp" />
@@ -223,6 +224,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
     </ClCompile>
     <ClCompile Include="Rebug.cpp" />
     <ClCompile Include="ShadowFixes.cpp" />
+    <ClCompile Include="Translate.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>

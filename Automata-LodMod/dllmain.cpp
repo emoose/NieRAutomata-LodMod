@@ -374,6 +374,7 @@ void LodMod_Init()
   AOFixes_Init();
   Rebug_Init();
   MapMod_Init();
+  Translate_Init();
 
   MH_EnableHook(MH_ALL_HOOKS);
 

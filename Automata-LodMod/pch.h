@@ -106,6 +106,9 @@ bool Proxy_Attach();
 void Proxy_Detach();
 void Proxy_InitSteamStub();
 
+// Translate.cpp
+void Translate_Init();
+
 // Utility.cpp
 bool FileExists(const WCHAR* Filename);
 bool DirExists(const WCHAR* DirPath);
