@@ -58,7 +58,24 @@ std::unordered_map<std::u8string, std::string> translations =
 	// TODO: Debug menu
 	{u8"現在P%03X:%s", "Currently P%03X:%s"},
 	{u8"G%05x:R%03x  シームレスマップ:%s", "G%05x:R%03x Seamless map:%s"},
+
+	// Guessing Muteki means I-Frames, not 100% certain though
+	{u8"T[%5.2f, %5.2f, %5.2f], R[%5.2f(%5.2f)], Rno[%d,%d,%d,%d], HP[ %d, %d ], Muteki[%d], Lv[%d], Beat[%d], 時速[%.2f]", 
+	   "T[%5.2f, %5.2f, %5.2f], R[%5.2f(%5.2f)], Rno[%d,%d,%d,%d], HP[ %d, %d ], I-Frames[%d], Lv[%d], Beat[%d], Speed[%.2f]"},
+	{u8"水に入っている", "On Water"}, // standing on water, draws on top of above string tho...
+	{u8"オイルに入っている", "On Oil"}, // standing on oil
+
+	// 14091CAC0
 	{u8"---イベント状況---", "---Event Status---"},
+	{u8"読み込み中", "Loading"},
+	{u8"再生開始待ち", "Waiting for playback"},
+	{u8"再生中", "Now Playing"},
+	{u8"フェーズイベント再生中：p%03x ev%04x cut%02d", "Playing phase event: p%03x ev%04x cut%02d"},
+	{u8"ムービー再生中：ev%04x cut%02d", "Playing movie: ev%04x cut%02d"},
+	{u8"通常イベント再生中：ev%04x cut%02d", "Playing normal event: ev%04x cut%02d"},
+	{u8"開放中", "Opening"},
+	{u8"エラー", "Error"},
+	{u8"スキップ可能", "Skippable"},
 
 	// next are from 1407C3620
 	{u8"総モデル数　:%d\n", "Model count:%d\n"},
@@ -79,9 +96,9 @@ std::unordered_map<std::u8string, std::string> translations =
 	{u8"[%s 詳細表示]\n", "[%s Detail View]\n"},
 	{u8"[R%03x %s 詳細表示]\n", "[R%03x %s Detail View]\n"},
 
-	{u8"カーソルキー↑↓：選択\n", "Cursor keys \x81\xAA\x81\xAB: Select\n"},
-	{u8"カーソルキー←→：部屋選択\n", "Cursor keys \x81\xA9\x81\xA8: Select room\n"},
-	{u8"カーソルキー→　：選択項目の詳細表示\n", "Cursor key \x81\xA8: Display details of selected item\n"},
+	{u8"カーソルキー↑↓：選択\n", "\x81\xAA\x81\xAB: Select\n"},
+	{u8"カーソルキー←→：部屋選択\n", "\x81\xA9\x81\xA8: Select room\n"},
+	{u8"カーソルキー→　：選択項目の詳細表示\n", "\x81\xA8: Display details of selected item\n"},
 	{u8"↑↓　　　　　　：選択\n", "\x81\xAA\x81\xAB: Select\n"},
 	{u8"ＳＨＩＦＴ＋↑↓：加速\n", "SHIFT+\x81\xAA\x81\xAB: Accelerate\n"},
 	{u8"ＲＥＴＵＲＮ　　：モデル位置に移動\n", "RETURN: Go to model position\n"},
@@ -91,6 +108,9 @@ std::unordered_map<std::u8string, std::string> translations =
 	{u8"←→　　　　　　：部屋選択\n", "\x81\xA9\x81\xA8: Select room\n"},
 	{u8"←　　　　　　　：トップに戻る\n", "\x81\xA9: Return to the top menu\n"},
 	{u8"ＨＯＭＥ　　　　：カメラをプレイヤーに戻す\n", "HOME: Return camera to the player\n"},
+
+	{u8"十字キー,↓↑:カーソル移動\n", "\x81\xAB\x81\xAA: Move Cursor\n"},
+	{u8"十字キー,←→:ツリー解除／展開\n", "\x81\xA9\x81\xA8: Expand/Retract\n"},
 
 	{u8"　　モデル名　　　　　　　　　　 モデル数　 メッシュ数 表示ポリ数　　LOD0[数]    LOD1 　　   LOD2　　   LOD3　　　影     影描画数\n",
 		 "  Model name      Models Meshes Plys LOD0[num]LOD1     LOD2     LOD3   Shadow    DrawnShadows\n"},
@@ -282,9 +302,9 @@ extern std::unordered_map<int, const char*> replacements_GRAPHIC;
 extern std::unordered_map<int, const char*> replacements_DISP;
 extern std::unordered_map<int, const char*> replacements_GAME;
 
-typedef void(*Debug_PrintToScreen_E4ACA0_Fn)(void* a1, void* a2, const char* Format, void* va_list);
-Debug_PrintToScreen_E4ACA0_Fn Debug_PrintToScreen_E4ACA0_Orig;
-void Debug_PrintToScreen_E4ACA0_Hook(void* a1, void* a2, const char* Format, void* va_list)
+typedef void(*Debug_PrintToScreen_E4AA70_Fn)(void* a1, void* a2, void* a3, const char* Format, void* va_list);
+Debug_PrintToScreen_E4AA70_Fn Debug_PrintToScreen_E4AA70_Orig;
+void Debug_PrintToScreen_E4AA70_Hook(void* a1, void* a2, void* a3, const char* Format, void* va_list)
 {
 	// First convert input from SJIS to UTF8, for comparison with our map...
 	auto converted = sj2utf8(Format);
@@ -294,7 +314,7 @@ void Debug_PrintToScreen_E4ACA0_Hook(void* a1, void* a2, const char* Format, voi
 	if (translations_fixed.count(converted.c_str()))
 		format = translations_fixed[converted].c_str();
 
-	return Debug_PrintToScreen_E4ACA0_Orig(a1, a2, format, va_list);
+	return Debug_PrintToScreen_E4AA70_Orig(a1, a2, a3, format, va_list);
 }
 
 void Translate_Init()
@@ -314,7 +334,7 @@ void Translate_Init()
 		MH_CreateHook(GameAddress<LPVOID>(0xE491E0), Debug_PrintToConsole_Hook, (LPVOID*)&Debug_PrintToConsole_Orig);
 
 		// Translate text writes to debug-menu pages
-		MH_CreateHook(GameAddress<LPVOID>(0xE4ACA0), Debug_PrintToScreen_E4ACA0_Hook, (LPVOID*)&Debug_PrintToScreen_E4ACA0_Orig);
+		MH_CreateHook(GameAddress<LPVOID>(0xE4AA70), Debug_PrintToScreen_E4AA70_Hook, (LPVOID*)&Debug_PrintToScreen_E4AA70_Orig);
 
 		// Model category "その他" -> "MISC"
 		const char* sMiscCategory = "MISC\0";
