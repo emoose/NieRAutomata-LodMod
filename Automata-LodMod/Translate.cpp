@@ -21,7 +21,7 @@ std::unordered_map<std::u8string, std::string> translations =
 	{u8"不正なタスク移譲が発生しました。", "An invalid task transfer occurred."},
 	{u8"不正なタスク休止が発生しました。", "An invalid task pause occurred."},
 	{u8"不正なタスク終了が発生しました。", "An invalid task termination occurred."},
-	{u8"タスクマネージャーの初期化に失敗しました。", "Failed to initialize Task Manager."},
+	{u8"タスクマネージャーの初期化に失敗しました。", "Failed to initialize the Task Manager."},
 	{u8"不正なタスクムーブが発生しました。", "An invalid task move occurred."},
 	{u8"不正なタスク消滅が発生しました。", "An invalid task disappearance."},
 	{u8"不正なタスク起動が発生しました。", "An invalid task start occurred."},
@@ -73,16 +73,65 @@ void Game__ShowMessageBoxVA_Hook(const char* Format, va_list ArgList)
 	int wide_length = MultiByteToWideChar(CP_UTF8, 0, text, 2048, NULL, 0);
 	if (wide_length)
 	{
-		auto wide_ptr = std::make_unique<WCHAR[]>(wide_length);
+		auto wide_ptr = std::make_unique<WCHAR[]>(wide_length + 1);
 		if (MultiByteToWideChar(CP_UTF8, 0, text, 2048, wide_ptr.get(), wide_length) == wide_length)
 		{
-			MessageBoxW(0, wide_ptr.get(), messageBoxCaption_wide, 0x40000);
+			wide_ptr.get()[wide_length] = 0; // null-terminate because MBTWC doesn't always do it?
+			MessageBoxW(0, wide_ptr.get(), messageBoxCaption_wide, MB_TOPMOST);
 			return;
 		}
 	}
 
 	// Something failed, fall back to MessageBoxA
-	MessageBoxA(0, text, messageBoxCaption, 0x40000);
+	MessageBoxA(0, text, messageBoxCaption, MB_TOPMOST);
+
+	// Game normally writes the error to message_box.txt after this too, but that's kinda pointless when you can CTRL+C messageboxes, so meh...
+}
+
+typedef void(*Debug_PrintToConsole_Fn)(const char* Format, ...);
+Debug_PrintToConsole_Fn Debug_PrintToConsole_Orig;
+void Debug_PrintToConsole_Hook(const char* Format, ...)
+{
+	va_list va;
+	va_start(va, Format);
+
+	uint32_t* shouldPrintToConsole = GameAddress<uint32_t*>(0x20104D0);
+	if (!*shouldPrintToConsole)
+		return;
+
+	// First convert input from SJIS to UTF8, for comparison with our map...
+	auto converted = sj2utf8(Format);
+	
+	const char* format = Format;
+	if(translations_fixed.count(converted.c_str()))
+		format = translations_fixed[converted].c_str();
+
+	char text_buf[2048] = { 0 };
+	memset(text_buf, 0, 2048);
+	vsprintf_s(text_buf, format, va);
+
+	// Convert the vsprintf'd output, since they might have used shift-jis in a parameter
+	auto converted2 = sj2utf8(text_buf);
+	if (translations_fixed.count(converted2.c_str()))
+		converted2 = translations_fixed[converted2].c_str();
+
+	// Then convert UTF8 to UCS-2 so OutputDebugStringW can display it for us
+	int wide_length = MultiByteToWideChar(CP_UTF8, 0, converted2.c_str(), converted2.length(), NULL, 0);
+	if (wide_length)
+	{
+		auto wide_ptr = std::make_unique<WCHAR[]>(wide_length + 1);
+		if (MultiByteToWideChar(CP_UTF8, 0, converted2.c_str(), converted2.length(), wide_ptr.get(), wide_length) == wide_length)
+		{
+			wide_ptr.get()[wide_length] = 0; // null-terminate because MBTWC doesn't always do it?
+			OutputDebugStringW(wide_ptr.get());
+			OutputDebugStringW(L"\n");
+			return;
+		}
+	}
+
+	// Something failed, fall back to OutputDebugStringA
+	OutputDebugStringA(converted2.c_str());
+	OutputDebugStringA("\n");
 }
 
 void Translate_Init()
@@ -96,6 +145,11 @@ void Translate_Init()
 	// SafeWriteModule(0x283E26, uint16_t(0x9090));
 
 	MH_CreateHook(GameAddress<LPVOID>(Game__ShowMessageBoxVA_Addr), Game__ShowMessageBoxVA_Hook, (LPVOID*)&Game__ShowMessageBoxVA_Orig);
+
+	if (version == GameVersion::Debug2017)
+	{
+		MH_CreateHook(GameAddress<LPVOID>(0xE491E0), Debug_PrintToConsole_Hook, (LPVOID*)&Debug_PrintToConsole_Orig);
+	}
 }
 
 // https://stackoverflow.com/questions/33165171/c-shiftjis-to-utf8-conversion
