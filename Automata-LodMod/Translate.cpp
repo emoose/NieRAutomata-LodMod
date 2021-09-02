@@ -13,8 +13,8 @@ struct Debug_PlayerMenu
 {
 	struct
 	{
-		uint32_t unk0; // flag category?
-		uint64_t unk4; // flag idx?
+		uint32_t category_index;
+		uint64_t flag_index;
 		char name[0x100];
 		char description[0x200];
 	} Flags[36];
@@ -56,8 +56,48 @@ std::unordered_map<std::u8string, std::string> translations =
 	{u8"初期化されていない検索オブジェクトを実行しました。", "An uninitialized search object was executed."},
 
 	// TODO: Debug menu
+	{u8"現在P%03X:%s", "Currently P%03X:%s"},
+	{u8"G%05x:R%03x  シームレスマップ:%s", "G%05x:R%03x Seamless map:%s"},
+	{u8"---イベント状況---", "---Event Status---"},
 
+	// next are from 1407C3620
+	{u8"総モデル数　:%d\n", "Model count:%d\n"},
+	{u8"総メッシュ数:%d\n", "Mesh count: %d\n"},
+	{u8"総関節数　　:%d\n", "Joint count:%d\n"},
+	{u8"総ポリゴン数:%d(カメラ内：%d)\n", "Polygon count: %d (in camera: %d)\n"},
+	{u8"総BAT数 :%d(カメラ内：%d)\n", "BAT count: %d (in camera: %d)\n"},
+	{u8"カテゴリ  モデル数  メッシュ数  BAT数    ポリゴン数  関節数  表示モデル数  表示メッシュ数  表示BAT数  表示ポリゴン数  影落とし数\n",
+		 "Categ. Models Meshes BATs Polygons Joints VisModls VisMesh VisBATs VisPolys  ShadowsDropped\n"},
+	{u8"SC・BA・BHモデルが多すぎます(合計%d)\n", "Too many SC, BA, and BH models (total %d)\n"},
+	{u8"SC・BA・BHモデルが多いです(合計%d)\n", "Too many SC, BA, BH models (total %d)\n"},
+	{u8"総ポリゴン数が多すぎます(%d)\n", "Total polygon count is too high (%d)\n"},
+	{u8"総ポリゴン数が多いです(%d)\n", "Total polygon count is too high (%d)\n"},
+	{u8"表示マテリアル数が多すぎます(%d)\n", "Number of display materials is too large (%d)\n"},
+	{u8"表示マテリアル数が多いです(%d)\n", "Too many materials to display (%d)\n"},
+	{u8"敵の数が多いです(%d)\n", "Too many enemies (%d)\n"},
+	{u8"総ポリゴン数:%d\n", "Total polygons:%d\n"},
+	{u8"[%s 詳細表示]\n", "[%s Detail View]\n"},
+	{u8"[R%03x %s 詳細表示]\n", "[R%03x %s Detail View]\n"},
+
+	{u8"カーソルキー↑↓：選択\n", "Cursor keys \x81\xAA\x81\xAB: Select\n"},
+	{u8"カーソルキー←→：部屋選択\n", "Cursor keys \x81\xA9\x81\xA8: Select room\n"},
+	{u8"カーソルキー→　：選択項目の詳細表示\n", "Cursor key \x81\xA8: Display details of selected item\n"},
+	{u8"↑↓　　　　　　：選択\n", "\x81\xAA\x81\xAB: Select\n"},
+	{u8"ＳＨＩＦＴ＋↑↓：加速\n", "SHIFT+\x81\xAA\x81\xAB: Accelerate\n"},
+	{u8"ＲＥＴＵＲＮ　　：モデル位置に移動\n", "RETURN: Go to model position\n"},
+	{u8"ＲＥＴＵＲＮ　　：次のモデルへ\n", "RETURN: Go to next model\n"},
+	{u8"ＳＰＡＣＥ　　　：一覧表示モードへ\n", "SPACE: Go to list view mode\n"},
+	{u8"ＳＰＡＣＥ　　　：ポリゴン数詳細モードへ\n", "SPACE: Go to polygon number detail mode\n"},
+	{u8"←→　　　　　　：部屋選択\n", "\x81\xA9\x81\xA8: Select room\n"},
+	{u8"←　　　　　　　：トップに戻る\n", "\x81\xA9: Return to the top menu\n"},
+	{u8"ＨＯＭＥ　　　　：カメラをプレイヤーに戻す\n", "HOME: Return camera to the player\n"},
+
+	{u8"　　モデル名　　　　　　　　　　 モデル数　 メッシュ数 表示ポリ数　　LOD0[数]    LOD1 　　   LOD2　　   LOD3　　　影     影描画数\n",
+		 "  Model name      Models Meshes Plys LOD0[num]LOD1     LOD2     LOD3   Shadow    DrawnShadows\n"},
+	{u8"  モデル名            モデル数  メッシュ数  BAT数    ポリゴン数  関節数  表示モデル数  表示メッシュ数  表示BAT数  表示ポリゴン数\n",
+		 "  Model name       Models Meshes BATs   Polys Joints VisModls VisMeshs VisBATs VisiPolygons\n"}
 	// TODO: Debug log-messages?
+
 };
 
 std::unordered_map<std::string, std::string> translations_fixed;
@@ -209,7 +249,6 @@ void Debug_PlayerMenuPopulate_Hook()
 	SafeWriteModule(0x7BA2E4 + 5, uint32_t(0x18E87DC - (0x7BA2E4 + 9)));
 }
 
-
 void DebugMenu_Update(dbMenu_FlagCategory* category, const std::unordered_map<int, const char*>& replacements)
 {
 	DWORD oldProtect = 0;
@@ -243,6 +282,21 @@ extern std::unordered_map<int, const char*> replacements_GRAPHIC;
 extern std::unordered_map<int, const char*> replacements_DISP;
 extern std::unordered_map<int, const char*> replacements_GAME;
 
+typedef void(*Debug_PrintToScreen_E4ACA0_Fn)(void* a1, void* a2, const char* Format, void* va_list);
+Debug_PrintToScreen_E4ACA0_Fn Debug_PrintToScreen_E4ACA0_Orig;
+void Debug_PrintToScreen_E4ACA0_Hook(void* a1, void* a2, const char* Format, void* va_list)
+{
+	// First convert input from SJIS to UTF8, for comparison with our map...
+	auto converted = sj2utf8(Format);
+
+	// Check if we have any translation for the Format param, swap it out if so
+	const char* format = Format;
+	if (translations_fixed.count(converted.c_str()))
+		format = translations_fixed[converted].c_str();
+
+	return Debug_PrintToScreen_E4ACA0_Orig(a1, a2, format, va_list);
+}
+
 void Translate_Init()
 {
 	// Need to create a new map at runtime because of stupid C++20 restriction on initing std::string with u8...
@@ -258,6 +312,13 @@ void Translate_Init()
 	if (version == GameVersion::Debug2017)
 	{
 		MH_CreateHook(GameAddress<LPVOID>(0xE491E0), Debug_PrintToConsole_Hook, (LPVOID*)&Debug_PrintToConsole_Orig);
+
+		// Translate text writes to debug-menu pages
+		MH_CreateHook(GameAddress<LPVOID>(0xE4ACA0), Debug_PrintToScreen_E4ACA0_Hook, (LPVOID*)&Debug_PrintToScreen_E4ACA0_Orig);
+
+		// Model category "その他" -> "MISC"
+		const char* sMiscCategory = "MISC\0";
+		SafeWriteModule(0x19CD7E0, (char*)sMiscCategory, 5);
 
 		// Translate "debug player menu" entries
 		MH_CreateHook(GameAddress<LPVOID>(0x1864060), Debug_PlayerMenuPopulate_Hook, (LPVOID*)&Debug_PlayerMenuPopulate_Orig);
