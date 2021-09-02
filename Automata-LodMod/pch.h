@@ -110,6 +110,7 @@ void Proxy_InitSteamStub();
 void Translate_Init();
 
 // Utility.cpp
+std::string sj2utf8(const std::string& input);
 bool FileExists(const WCHAR* Filename);
 bool DirExists(const WCHAR* DirPath);
 bool GetModuleName(HMODULE module, WCHAR* destBuf, int bufLength);

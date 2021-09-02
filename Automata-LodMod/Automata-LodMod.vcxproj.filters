@@ -107,6 +107,9 @@
     <ClCompile Include="Translate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Translate_FlagDescs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="proxy.def">

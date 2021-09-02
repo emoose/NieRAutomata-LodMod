@@ -26,22 +26,24 @@ typedef void* (*fn_0args)();
 
 struct dbFlag
 {
-  char* Name;
-  char* Desc;
+  const char* Name;
+  const char* Desc;
 };
 
 struct dbMenu_FlagCategory
 {
-  char* Name;
-#ifdef NA_DEBUG
-  // debug EXE only :(
-  dbFlag* FlagNames;
-#endif
+  const char* Name;
+  dbFlag* FlagNames; // debug EXE only :(
   uint32_t* FlagPtr;
-  uint64_t NumBits;
+  uint64_t NumFlags;
 };
 
-struct dbMenu_Flag
+struct dbMenu_Flags
+{
+  dbMenu_FlagCategory category[8];
+};
+
+struct dbMenuRetail_Flag
 {
   /* 0x00 */ char* Name;
   /* 0x08 */ char* Desc; // japanese?
