@@ -21,7 +21,7 @@ struct Debug_PlayerMenu
 };
 #pragma pack(pop)
 
-std::unordered_map<std::u8string, std::string> translations =
+std::unordered_map<std::u8string, const char*> translations =
 {
 	// Error messages
 	{u8"メモリ不足が発生(%s)", "ERROR: Ran out of memory while loading %s."},
@@ -115,12 +115,264 @@ std::unordered_map<std::u8string, std::string> translations =
 	{u8"　　モデル名　　　　　　　　　　 モデル数　 メッシュ数 表示ポリ数　　LOD0[数]    LOD1 　　   LOD2　　   LOD3　　　影     影描画数\n",
 		 "  Model name      Models Meshes Plys LOD0[num]LOD1     LOD2     LOD3   Shadow    DrawnShadows\n"},
 	{u8"  モデル名            モデル数  メッシュ数  BAT数    ポリゴン数  関節数  表示モデル数  表示メッシュ数  表示BAT数  表示ポリゴン数\n",
-		 "  Model name       Models Meshes BATs   Polys Joints VisModls VisMeshs VisBATs VisiPolygons\n"}
+		 "  Model name       Models Meshes BATs   Polys Joints VisModls VisMeshs VisBATs VisiPolygons\n"},
+
+	// SaveData Edit - spacing is important here for us to compare to EXE string!
+	{u8"セーブデータ編集(保存はしない)\n", "Save Editor (Not saved)\n"},
+	{u8"セーブデータ編集 > %s\n", "Save Editor > %s\n"},
+	{u8"閉じる", "Close Editor"},
+
+	// - Save/Load
+	{u8"スロット%d　：　", "Slot %d: "},
+	{u8"セーブ", "Save"},
+	{u8"ロード", "Load"},
+	{u8"セーブを行いますか？\n", "Are you sure you want to save?"},
+	{u8"セーブ中.", "Saving."},
+	{u8"セーブ中..", "Saving.."},
+	{u8"セーブ中...", "Saving..."},
+	{u8"ロードを行いますか？\n", "Are you sure you want to load?"},
+
+	// - Weapon data
+	{u8"武器名　　　　　　　　　　　　　　　　　　　Lv　　　　\n", "Weapon Name           Lv\n"},
+
+	// - PauseMap
+	{u8"エリア名　　　　　　　　　　　　　　　　　　　\n", "Area name\n"},
+
+	// - Item data
+	{u8"所持金：%d\n", "Money: %d\n"},
+	{u8"【%3d/%3d】消費アイテム\n", "\x81\x79%3d/%3d\x81\x7A Consumables\n"},
+	{u8"【%3d/%3d】素材・合成アイテム\n", "\x81\x79%3d/%3d\x81\x7A Materials\n"},
+	{u8"【%3d/%3d】重要アイテム\n", "\x81\x79%3d/%3d\x81\x7A Key Items\n"},
+	{u8"【%3d/%3d】絵本\n", "\x81\x79%3d/%3d\x81\x7A Picture Books\n"},
+	{u8"【%3d/%3d】アーカイブ\n", "\x81\x79%3d/%3d\x81\x7A Archive\n"},
+	{u8"【%3d/%3d】魚\n", "\x81\x79%3d/%3d\x81\x7A Caught Fish\n"},
+
+	// - Skill data
+	{u8"【%3d/%3d】アクティブスキル\n", "\x81\x79%3d/%3d\x81\x7A Pod Programs\n"},
+	{u8"【？？？/？？？】パッシブスキル\n", "\x81\x79???/???\x81\x7A Plug-in Chips\n"},
+	{u8"------------------------ アクティブスキル  ----------------------------\n",
+	   ""},
+	{u8"全ON　　　　　　　　　　　　　　　", 
+		 "All ON          "},
+	{u8"全OFF", "All OFF"},
+	
+	{u8"Ｒ０１０：レーザー　　　　　　", "R010: Laser  "},
+	{u8"Ｒ０２０：ミラージュ　　　　　", "R020: Mirage  "},
+	{u8"Ｒ０３０：ハンマー　　　　　　", "R030: Hammer  "},
+	{u8"Ｒ０４０：ブレード　　　　　　", "R040: Blade"},
+	{u8"Ｒ０５０：スピアー　　　　　　", "R050: Spear  "},
+	{u8"Ａ０６０：Ｐシールド（物理）　", "R060: P Shield"},
+	{u8"Ｒ０７０：Ｍシールド（射撃）　", "R070: M Shield"},
+	{u8"Ａ０８０：ウェーブ　　　　　　", "A080: Wave"},
+	{u8"Ａ０９０：ワイヤー　　　　　　", "A090: Wire   "},
+	{u8"Ａ１００：デコイ　　　　　　　", "A100: Decoy   "},
+	{u8"Ａ１１０：スロー　　　　　　　", "A110: Slow    "},
+	{u8"Ａ１２０：リペア　　　　　　　", "A120: Repair"},
+	{u8"Ａ１３０：ボム　　　　　　　　", "A130: Bomb   "},
+	{u8"Ａ１４０：グラビティ　　　　　", "A140: Gravity "},
+	{u8"Ａ１５０：ヴォルト（１体感電）", "A150: Volt    "},
+	{u8"Ａ１６０：ミサイル（突進）　　", "A160: Missile"},
+	{u8"Ａ１７０：スキャナー　　　　　", "A170: Scanner "},
+
+	{u8"-------------------------------- メモリ増設  ------------------------------------\n", 
+		 "------------------------------- Memory Size  -----------------------------------\n"},
+	{u8"------------------------------- パッシブスキル  -----------------------------------\n",
+		 "------------------------------- Plug-in Chips  ---------------------------------\n"},
+
+	// TODO: find why this doesn't apply
+	{u8"――――――　効果　―――――：＋－：　Ｃ　",
+	   "\x81\x5C\x81\x5C\x81\x5C\x81\x5C\x81\x5C\x81\x5C" "Effect" "\x81\x5C\x81\x5C\x81\x5C\x81\x5C\x81\x5C"
+	   "\x81\x46\x81\x7B\x81\x5D\x81\x46\x81\x40\x82\x62\x81\x40"},
+
+	// Plug-in chips
+	// TODO: go through game and find actual names of these
+	// TODO: trim these to 16 chars max
+	/*
+	{u8"武器攻撃力ＵＰ　　　　　　　　", "Weapon Attack UP      "},
+	{u8"ダウン攻撃力ＵＰ　　　　　　　", "Down Attack UP        "},
+	{u8"クリティカルヒットＵＰ　　　　", "Critical Hit UP       "},
+	{u8"ポッド攻撃力ＵＰ　　　　　　　", "Pod Attack Power UP   "},
+	{u8"スキルクールダウン時間減少　　", "Skill cooldown reduce "},
+	{u8"物理防御力ＵＰ　　　　　　　　", "Phys Defense UP   "},
+	{u8"銃弾防御力ＵＰ　　　　　　　　", "Bullet Defense UP "},
+	{u8"連続ダメージ防止　　　　　　　", "Prevent COntinuous Dmg "},
+	{u8"ライフＵＰ　　　　　　　　　　", "Life UP  "},
+	{u8"攻撃ライフ回復　　　　　　　　", "Attack Life Recovery  "},
+	{u8"撃破ライフ回復　　　　　　　　", "Defeat Life  "},
+	{u8"オートライフ回復　　　　　　　", "Auto Life Recovery "},
+	{u8"回避行動距離ＵＰ　　　　　　　", "Evade Distance UP"},
+	{u8"移動速度ＵＰ　　　　　　　　　", "Movement Speed UP "},
+	{u8"アイテムドロップ率ＵＰ　　　　", "Drop Rate UP "},
+	{u8"取得経験値ＵＰ　　　　　　　　", "Experience Gain UP "},
+	{u8"斬撃効果付加　　　　　　　　　", "Slashing effect added"},
+	{u8"バーサク効果付加　　　　　　　", "Berserk effect added " },
+	{u8"ダメージ吸収効果付加　　　　　", "Damage Absorption " },
+	{u8"オートリフレクト効果付加　　　", "Auto-Reflect Effect" },
+	{u8"ガッツ効果付加　　　　　　　　", "Guts effect added "},
+	{u8"魔女の時間　　　　　　　　　　", "Witching Time "},
+	{u8"スーパーアーマー付加　　　　　", "Add Super Armor "},
+	{u8"アイテムスキャン　　　　　　　", "Item Scan "},
+	{u8"カウンターアクション付加　　　", "counter action added "},
+	{u8"ホールドアクション強化　　　　", "Hold Action Enhancement "},
+	{u8"チャージアタック付加　　　　　", "Add Charge Attack "},
+	{u8"オートアイテム　　　　　　　　", "Auto Item "},
+	{u8"操作　　　　　　　　　　　　　", "Manipulation "},
+	{u8"スタン　　　　　　　　　　　　", "Stun "},
+	{u8"炎上　　　　　　　　　　　　　", "Flame "},
+	{u8"回復アイテムドロップ　　　　　", "Recovery Item Drop "},
+	{u8"断末魔　　　　　　　　　　　　", "Decapitation "},
+	{u8"ＨＵＤ：ＨＰゲージ　　　　　　", "HUD: HP Gauge "},
+	{u8"ＨＵＤ：サウンドインジケーター", "HUD: Sound Indicator "},
+	{u8"ＨＵＤ：敵情報表示　　　　　　", "HUD: Enemy Info "},
+	{u8"ＯＳチップ　　　　　　　　　　", "OS Chip"},
+	{u8"弾スロー　　　　　　　　　　　", "Bullet Throw"},
+	{u8"コンボ継続　　　　　　　　　　", "Continue Combo "},
+	{u8"弾誘爆　　　　　　　　　　　　", "Bullet Induced Explosion"},
+	{u8"アイテム自動吸着　　　　　　　", "Item Auto-Attach "},
+	{u8"ＨＵＤ：アクティブスキルゲージ", "HUD: Active Skill Gauge"},
+	{u8"ＨＵＤ：ログ表示　　　　　　　", "HUD: Log Display "},
+	{u8"ＨＵＤ：ミニマップ表示　　　　", "HUD: Mini Map Display "},
+	{u8"ＨＵＤ：経験値バー　　　　　　", "HUD: Experience bar "},
+	{u8"ＨＵＤ：セーブ可能アイコン　　", "HUD: Saveable Icon "},
+	{u8"ＨＵＤ：ダメージ数値表示　　　", "HUD: Display damage values "},
+	{u8"ＨＵＤ：目的地表示　　　　　　", "HUD: Destination Display"},
+	{u8"ＨＵＤ：空気読み表示　　　　　", "HUD: Air Reading Display "},
+	{u8"ＨＵＤ：お魚エリア　　　　　　", "HUD:Fishing Area "},
+	{u8"オート攻撃　　　　　　　　　　", "Auto Attack "},
+	{u8"オート銃撃　　　　　　　　　　", "Auto Shooting"},
+	{u8"オート回避　　　　　　　　　　", "Auto Evade"},
+	{u8"オートポッド・プログラム　　　", "Auto Pod-Program"},
+	{u8"オート武器切替　　　　　　　　", "Auto Weapon-Switch"},
+	*/
+
+	// - Progress collect data
+	{u8"総プレイ時間:", "Play Time:"},
+	{u8"【%3d/%3d】ハッキング\n", "\x81\x79%3d/%3d\x81\x7A Hacking\n"},
+	{u8"【%3d/%3d】チュートリアル\n", "\x81\x79%3d/%3d\x81\x7A Tutorial\n"},
+	{u8"【%3d/%3d】メール\n", "\x81\x79%3d/%3d\x81\x7A Mail\n"},
+	{u8"【%3d/%3d】敵図鑑(%d％)\n", "\x81\x79%3d/%3d\x81\x7A Unit Data (%d\x81\x93)\n"},
+	{u8"【%3d/%3d】ノベル\n", "\x81\x79%3d/%3d\x81\x7A Novel\n"},
+
+	// - Progress collect data - Tutorial (requires manual address edits)
+	// -- Dialog (0x1419CEA90 sz 18 offs 8)
+	{u8"システムメニュー　　　　　　　　", 
+		 "System Menu  "},
+	{u8"ミニマップ　　　　　　　　　　　",
+		 "Mini-Map  "},
+	{u8"端末　　　　　　　　　　　　　　",
+		 "Access Points  "},
+	{u8"端末：転送による移動　　　　　　",
+		 "Access Points: Transport  "},
+	{u8"端末：転送できない場合　　　　　",
+		 "Access Points: Unavailable  "},
+	{u8"端末：メールＢＯＸ　　　　　　　",
+		 "Access Points: Inbox  "},
+	{u8"端末：ゲームセンター　　　　　　",
+		 "Access Points: Arcade  "},
+	{u8"義体システム　　　　　　　　　　",
+		 "Death and Recovery  "},
+	{u8"義体システム：アップロード　　　",
+		 "Uploading upon Death  "},
+	{u8"義体システム：他人の義体　　　　",
+		 "Other Players' Bodies  "},
+	{u8"サブクエスト　　　　　　　　　　",
+		 "Sub-quests  "},
+	{u8"サブクエストの状況　　　　　　　",
+		"Sub-quest Progress  "},
+	{u8"デバッグメニュー　　　　　　　　",
+		 "Debug Menu  "},
+	// -- Tutorial (0x1419CEBD0 sz 18 offs 8)
+	{u8"移動　　　　　　　　　",
+		 "Move  "},
+	{u8"カメラ操作　　　　　　",
+		 "Move camera   "},
+	{u8"回避　　　　　　　　　",
+		 "Evade  "},
+	{u8"ジャンプ　　　　　　　",
+		 "Jump  "},
+	{u8"ダッシュ　　　　　　　",
+		 "Dash  "},
+	{u8"ロックオン　　　　　　",
+		 "Lock-on  "},
+	{u8"ロックオン切り替え　　",
+		 "Switch target  "},
+	{u8"装備セット切り替え　　",
+		 "Switch Weapons  "},
+	{u8"ポッド切り替え　　　　",
+		 "Switch Pods  "},
+	{u8"アイテム使用　　　　　",
+		 "Use Items  "},
+	{u8"ポーズショートカット　",
+		 "Shortcut Menu  "},
+	{u8"システムメニュー　　　",
+		 "System Menu  "},
+	{u8"ライト（ＯＮ／ＯＦＦ）",
+		 "Pod Light (On/Off)  "},
+	{u8"釣り　　　　　　　　　",
+		 "Fish  "},
+	// -- Battle (0x1419CED20 sz 18 offs 8)
+	{u8"射撃　　　　　　　　　",
+		 "Fire  "},
+	{u8"スピードアタック　　　",
+		 "Light Attack  "},
+	{u8"ヘビーアタック　　　　","Heavy Attack  "},
+	{u8"ポッド・プログラム　　","Pod program  "},
+	{u8"ジャスト回避　　　　　","Perfect Evade  "},
+	{u8"カウンター　　　　　　","Counter  "},
+	{u8"自爆　　　　　　　　　","Self-destruct  "},
+	{u8"バーサーカーモード　　","Berserk Mode  "},
+	{u8"挑発（チップ）　　　　","Taunt  "},
+	{u8"挑発（Ａ２のみ）　　　","Taunt (A2 only)  "},
+	// -- Hacking (0x1419CEE10 sz 18 offs 8 cnt 4)
+	{u8"ハッキング　　　　　　","Hack  "},
+	{u8"移動　　　　　　　　　","Move  "},
+	{u8"射撃　　　　　　　　　","Fire  "},
+	{u8"方向転換　　　　　　　","Change Direction  "},
+	// -- Flying (0x1419CEE70 sz 18 offs 8 cnt 5)
+	{u8"射撃方向　　　　　　　","Aim  "},
+	{u8"ミサイル発射　　　　　","Missile Barrage  "},
+	// -- Animal (0x1419CEEF0 sz 18 offs 8 cnt 4)
+	{u8"降りる　　　　　　　　","Dismount  "},
+
+	// - Achievement counters, TL text taken from Steam achievement info
+	{u8"-------------------  トロフィー/実績   ----------------------\n", "------------------- Trophies/Achievements ----------------------\n"},
+	{u8"[%4d/%4d]死体%d体以上回収する\n", "[%4d/%4d] Have %d bodies collected.\n"},
+	{u8"[%4d/%4d]ハッキングで機械生命体を%d体撃破する\n", "[%4d/%4d] %d machine lifeforms destroyed by hacking.\n"},
+	{u8"[%4d/%4d]リモート操作状態で機械生命体を%d体撃破する\n", "[%4d/%4d] %d machine lifeforms destroyed by remote control.\n"},
+	{u8"[%4d/%4d]A2のバーサーカーモードで敵を%d体撃破する\n", "[%4d/%4d] %d machine lifeforms destroyed with berserk mode.\n"},
+	{u8"[%4d/%4d]飛行ユニット搭乗時に敵を%d体撃破する\n", "[%4d/%4d] %d enemies destroyed using a flight unit.\n"},
+	{u8"[%4d/%4d]NPCの機械生命体を%d体破壊する\n", "[%4d/%4d] %d friendly machine lifeforms destroyed.\n"},
+	{u8"[%4.0f/%4.0f]動物に乗った状態での走行距離が%4.0fkm以上になる\n", "[%4.0f/%4.0f] Any animal ridden for %4.0f meters.\n"},
+	{u8"[%4d/%4d]2Bのスカート覗き避けを%d回以上見た\n", "[%4d/%4d] 2B's secret discovered %d times.\n"},
+
+	/*{u8"レジスタンスキャンプ　　　　　　", "Resistance Camp"},
+	{u8"廃墟都市　　　　　　　　　　　　", "City Ruins"},
+	{u8"廃墟都市：廃工場付近          　 ", "City Ruins: Near Factory"},
+	{u8"廃墟都市：ショッピングモール 　　", "City Ruins: Near the Tower"},
+	{u8"砂漠地帯：キャンプ　　　　　　　", "Desert: Camp"},
+	{u8"砂漠地帯：内部　　　　　　　　　", "Desert: Center"},
+	{u8"砂漠地帯：オアシス　　　　　　　", "Desert: Oasis"},
+	{u8"砂漠地帯：マンモス団地　　　　　", "Desert: Apartment Blocks"},
+	{u8"遊園地跡地　　　　　　　　　　　", "Amusement Park Ruins"},
+	{u8"遊園地跡地：コースター　　　　　", "Amusement Park: Coaster"},
+	{u8"遊園地跡地：工場内　　　　　　　", "Amusement Park: Inside the Factory"},
+	{u8"遊園地跡地：劇場上　　　　　　　", "Amusement Park: In the Theater"},
+	{u8"廃工場（ロボット山）：マップ用　", "Abandoned Factory (Robot Mountain): for map"},
+	{u8"廃工場　　　　　　　　　　　　　", "Abandoned Factory"},
+	{u8"廃工場：入口　　   　　　　　　", "Abandoned Factory: Entrance"},
+	{u8"廃工場：地下入口　\t　　　　　　", "Abandoned Factory: Underground Entrance"},
+	{u8"エイリアンシップ（仮）　　　　　", "Alien Ship (temporary)"},
+	{u8"パスカルの村　　　　　　　　　　", "Pascal's Village"},
+	{u8"森林地帯　　　　　　　　　　　　", "Forest area"},
+	{u8"森の城：前　　　　　　　　　　　", "Forest Castle: Front"},
+	{u8"森の城：王室前　　　　　　　　　", "Forest Castle: In Front of the Royal Palace"},
+	{u8"水没都市　　　　　　　　　　　", "Flooded City"},*/
+
 	// TODO: Debug log-messages?
 
 };
 
-std::unordered_map<std::string, std::string> translations_fixed;
+std::unordered_map<std::string, const char*> translations_fixed;
 
 std::string sj2utf8(const std::string& input);
 
@@ -136,8 +388,9 @@ void Game__ShowMessageBoxVA_Hook(const char* Format, va_list ArgList)
 	auto converted = sj2utf8(Format);
 
 	const char* format = converted.c_str();
-	if (translations_fixed.count(converted.c_str()))
-		format = translations_fixed[converted].c_str();
+
+	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+		format = translations_fixed[converted];
 
 	char text[2048];
 	vsprintf_s(text, format, ArgList);
@@ -176,8 +429,8 @@ void Debug_PrintToConsole_Hook(const char* Format, ...)
 	auto converted = sj2utf8(Format);
 	
 	const char* format = Format;
-	if(translations_fixed.count(converted.c_str()))
-		format = translations_fixed[converted].c_str();
+	if(Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+		format = translations_fixed[converted];
 
 	char text_buf[2048] = { 0 };
 	memset(text_buf, 0, 2048);
@@ -185,8 +438,8 @@ void Debug_PrintToConsole_Hook(const char* Format, ...)
 
 	// Convert the vsprintf'd output, since they might have used shift-jis in a parameter
 	auto converted2 = sj2utf8(text_buf);
-	if (translations_fixed.count(converted2.c_str()))
-		converted2 = translations_fixed[converted2].c_str();
+	if (Settings.TranslateEnable && translations_fixed.count(converted2.c_str()))
+		converted2 = translations_fixed[converted2];
 
 	// Then convert UTF8 to UCS-2 so OutputDebugStringW can display it for us
 	int wide_length = MultiByteToWideChar(CP_UTF8, 0, converted2.c_str(), converted2.length(), NULL, 0);
@@ -214,7 +467,7 @@ void Debug_PlayerMenuPopulate_Hook()
 	// Let game set it up for us...
 	Debug_PlayerMenuPopulate_Orig();
 
-	if (version != GameVersion::Debug2017)
+	if (version != GameVersion::Debug2017 || !Settings.TranslateEnable)
 		return; // lolwut
 
 	std::unordered_map<int, std::tuple<const char*, const char*>> replacements = {
@@ -311,10 +564,56 @@ void Debug_PrintToScreen_E4AA70_Hook(void* a1, void* a2, void* a3, const char* F
 
 	// Check if we have any translation for the Format param, swap it out if so
 	const char* format = Format;
-	if (translations_fixed.count(converted.c_str()))
-		format = translations_fixed[converted].c_str();
+	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+			format = translations_fixed[converted];
 
 	return Debug_PrintToScreen_E4AA70_Orig(a1, a2, a3, format, va_list);
+}
+
+typedef void(*Debug_sprintf_Fn)(char* output, const char* format, void* va_list);
+Debug_sprintf_Fn Debug_sprintf_0x40_Orig;
+void Debug_sprintf_0x40_Hook(char* output, const char* Format, void* va_list)
+{
+	// First convert input from SJIS to UTF8, for comparison with our map...
+	auto converted = sj2utf8(Format);
+
+	// Check if we have any translation for the Format param, swap it out if so
+	const char* format = Format;
+	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+		format = translations_fixed[converted];
+
+	return Debug_sprintf_0x40_Orig(output, format, va_list);
+}
+
+Debug_sprintf_Fn Debug_sprintf_0x80_Orig;
+void Debug_sprintf_0x80_Hook(char* output, const char* Format, void* va_list)
+{
+	// First convert input from SJIS to UTF8, for comparison with our map...
+	auto converted = sj2utf8(Format);
+
+	// Check if we have any translation for the Format param, swap it out if so
+	const char* format = Format;
+	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+		format = translations_fixed[converted];
+
+	return Debug_sprintf_0x80_Orig(output, format, va_list);
+}
+
+void TranslateStringPointers(uintptr_t startOffset, int stringOffset, int entrySize, int numEntries)
+{
+	uint8_t* start = (uint8_t*)startOffset;
+	uint8_t* end = start + (entrySize * numEntries);
+
+	uint8_t* cur = start;
+	for (int i = 0; i < numEntries; i++)
+	{
+		char** string = (char**)(cur + stringOffset);
+		auto converted = sj2utf8(*string);
+		if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+			SafeWrite((uintptr_t)string, (uintptr_t)translations_fixed[converted]);
+
+		cur += entrySize;
+	}
 }
 
 void Translate_Init()
@@ -336,23 +635,87 @@ void Translate_Init()
 		// Translate text writes to debug-menu pages
 		MH_CreateHook(GameAddress<LPVOID>(0xE4AA70), Debug_PrintToScreen_E4AA70_Hook, (LPVOID*)&Debug_PrintToScreen_E4AA70_Orig);
 
-		// Model category "その他" -> "MISC"
-		const char* sMiscCategory = "MISC\0";
-		SafeWriteModule(0x19CD7E0, (char*)sMiscCategory, 5);
+		if (Settings.TranslateEnable)
+		{
+			MH_CreateHook(GameAddress<LPVOID>(0xC838), Debug_sprintf_0x80_Hook, (LPVOID*)&Debug_sprintf_0x80_Orig);
+			MH_CreateHook(GameAddress<LPVOID>(0x2693B), Debug_sprintf_0x40_Hook, (LPVOID*)&Debug_sprintf_0x40_Orig);
 
-		// Translate "debug player menu" entries
-		MH_CreateHook(GameAddress<LPVOID>(0x1864060), Debug_PlayerMenuPopulate_Hook, (LPVOID*)&Debug_PlayerMenuPopulate_Orig);
+			// Model category "その他" -> "MISC"
+			const char* sMiscCategory = "MISC\0";
+			SafeWriteModule(0x19CD7E0, (char*)sMiscCategory, 5);
 
-		// Translate debug menu flag-editor descriptions
-		dbMenu_Flags* flags = GameAddress<dbMenu_Flags*>(0x1F33A50);
-		DebugMenu_Update(&flags->category[0], replacements_DBG);
-		DebugMenu_Update(&flags->category[1], replacements_DBSTP);
-		DebugMenu_Update(&flags->category[2], replacements_DBDISP);
-		DebugMenu_Update(&flags->category[3], replacements_DBGRAPHIC);
-		DebugMenu_Update(&flags->category[4], replacements_STA);
-		DebugMenu_Update(&flags->category[5], replacements_STOP);
-		DebugMenu_Update(&flags->category[6], replacements_GRAPHIC);
-		DebugMenu_Update(&flags->category[7], replacements_DISP);
-		DebugMenu_Update(&flags->category[8], replacements_GAME);
+			// Translate "debug player menu" entries
+			MH_CreateHook(GameAddress<LPVOID>(0x1864060), Debug_PlayerMenuPopulate_Hook, (LPVOID*)&Debug_PlayerMenuPopulate_Orig);
+
+			// Add +8 to "SaveData Edit" string reading offset, make it read the english names which already existed(!)
+			SafeWriteModule(0x7D7A81 + 3, 0x1771218 + 8);
+			SafeWriteModule(0x7DAD83 + 3, 0x176DF16 + 8);
+			SafeWriteModule(0x7DAE38 + 2, uint8_t(0x10 - 8));
+
+			// Translate debug menu flag-editor descriptions
+			dbMenu_Flags* flags = GameAddress<dbMenu_Flags*>(0x1F33A50);
+			DebugMenu_Update(&flags->category[0], replacements_DBG);
+			DebugMenu_Update(&flags->category[1], replacements_DBSTP);
+			DebugMenu_Update(&flags->category[2], replacements_DBDISP);
+			DebugMenu_Update(&flags->category[3], replacements_DBGRAPHIC);
+			DebugMenu_Update(&flags->category[4], replacements_STA);
+			DebugMenu_Update(&flags->category[5], replacements_STOP);
+			DebugMenu_Update(&flags->category[6], replacements_GRAPHIC);
+			DebugMenu_Update(&flags->category[7], replacements_DISP);
+			DebugMenu_Update(&flags->category[8], replacements_GAME);
+
+			// Pod Programs
+			TranslateStringPointers(0x1419D2A40, 8, 0x18, 17);
+			// Plugin Chips
+			TranslateStringPointers(0x1419D2BF8, 8, 0x18, 0x37);
+
+			// Tutorials...
+			TranslateStringPointers(0x1419CEA90, 8, 0x18, 13);
+			TranslateStringPointers(0x1419CEBD0, 8, 0x18, 27 - 13);
+			TranslateStringPointers(0x1419CED20, 8, 0x18, 10);
+			TranslateStringPointers(0x1419CEE10, 8, 0x18, 4);
+			TranslateStringPointers(0x1419CEE70, 8, 0x18, 5);
+			TranslateStringPointers(0x1419CEEF0, 8, 0x18, 4);
+
+			// PauseMap entries
+			std::vector<const char*> pauseMapReplacements = {
+				"Resistance Camp",
+				"City Ruins",
+				"City Ruins: Near Factory",
+				"City Ruins: Near the Tower",
+				"Desert: Camp",
+				"Desert: Center",
+				"Desert: Oil Field",
+				"Desert: Housing Complex",
+				"Park Ruins: Attraction Sq.",
+				"Park Ruins: Coaster (unused?)", // unused?
+				"Park Ruins: Inside the Factory (unused?)", // unused?
+				"Park Ruins: In the Theater (unused?)", // unused?
+				"Factory: Robot Mountain (unused?)", // unused?
+				"Factory: Entrance",
+				"Factory: Hangar",
+				"Factory: Furnace",
+				"City Ruins: Cave",
+				"Pascal's Village",
+				"Forest Zone: Center",
+				"Forest Castle: Front",
+				"Forest Castle: Royal Chamber",
+				"Flooded City: Coast",
+			};
+			
+			// TODO: change this to use TranslateStringPointers?
+			struct PauseMapEntry
+			{
+				uint64_t unk0;
+				const char* display_name;
+				const char* name_id;
+			};
+			PauseMapEntry* pauseMapEntries = GameAddress<PauseMapEntry*>(0x19D19D0);
+			for (auto& replacement : pauseMapReplacements)
+			{
+				SafeWrite((uintptr_t)&pauseMapEntries->display_name, (uintptr_t)replacement);
+				pauseMapEntries++;
+			}
+		}
 	}
 }

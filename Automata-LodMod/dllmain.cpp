@@ -42,6 +42,8 @@ LodModSettings Settings = {
   .BuffersExtendTo2021 = true,
   .MoviesEnableH264 = -1,
   .MoviesEncryptionKey = 0,
+  .TranslateFixJapaneseEncoding = true,
+  .TranslateEnable = true
 };
 
 GameVersion version; // which GameVersion we're injected into

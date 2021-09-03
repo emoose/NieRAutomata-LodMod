@@ -87,6 +87,8 @@ struct LodModSettings
   bool BuffersExtendTo2021;
   int MoviesEnableH264;
   uint64_t MoviesEncryptionKey;
+  bool TranslateFixJapaneseEncoding;
+  bool TranslateEnable;
 };
 extern LodModSettings Settings;
 extern uintptr_t mBaseAddress;
