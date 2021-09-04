@@ -4,7 +4,7 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
-#define LODMOD_VERSION "0.77.0"
+#define LODMOD_VERSION "0.77.1"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
@@ -42,8 +42,10 @@ LodModSettings Settings = {
   .BuffersExtendTo2021 = true,
   .MoviesEnableH264 = -1,
   .MoviesEncryptionKey = 0,
-  .TranslateFixJapaneseEncoding = true,
-  .TranslateEnable = true
+  .MiscFixJapaneseEncoding = true,
+  .MiscTranslateEnable = true,
+  .MiscSkipIntroMovies = false,
+  .MiscSkipBootingScreens = false,
 };
 
 GameVersion version; // which GameVersion we're injected into
@@ -203,6 +205,10 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.BuffersMovieMultiplier = INI_GetFloat(iniPath, L"Buffers", L"MovieMultiplier", Settings.BuffersMovieMultiplier);
   Settings.BuffersExtendTo2021 = INI_GetBool(iniPath, L"Buffers", L"ExtendTo2021", Settings.BuffersExtendTo2021);
   Settings.MoviesEnableH264 = GetPrivateProfileIntW(L"Movies", L"EnableH264", Settings.MoviesEnableH264, iniPath);
+  Settings.MiscFixJapaneseEncoding = INI_GetBool(iniPath, L"Misc", L"FixJapaneseEncoding", Settings.MiscFixJapaneseEncoding);
+  Settings.MiscTranslateEnable = INI_GetBool(iniPath, L"Misc", L"TranslateEnable", Settings.MiscTranslateEnable);
+  Settings.MiscSkipIntroMovies = INI_GetBool(iniPath, L"Misc", L"SkipIntroMovies", Settings.MiscSkipIntroMovies);
+  Settings.MiscSkipBootingScreens = INI_GetBool(iniPath, L"Misc", L"SkipBootingScreens", Settings.MiscSkipBootingScreens);
 
   WCHAR encryptionKey[256];
   int sz = sizeof(encryptionKey);
@@ -380,13 +386,40 @@ void LodMod_Init()
 
   MH_EnableHook(MH_ALL_HOOKS);
 
+  if (Settings.MiscSkipIntroMovies)
+  {
+    const uint32_t IntroMoviesPatch_Addr[] = { 0x760D76, 0x758C46, 0x76F126, 0x51E5AE, 0x80DDD1 };
+    SafeWrite(GameAddress(IntroMoviesPatch_Addr), uint16_t(0x9090));
+  }
+
+  if (Settings.MiscSkipBootingScreens)
+  {
+    // Patch code which normally increases boot screen stage from 0, change it to 0 -> 4 instead
+    const uint32_t BootScreenStage0to2_Addr[] = { 0x97C5DC, 0x973D2C, 0x9A356C, 0x688046, 0xBBA0E6 };
+    const uint32_t BootScreenStage0to1_Addr[] = { 0x97C5F1, 0x973D41, 0x9A3581, 0x6880B1, 0xBBA0FB }; // Steam2017 is editing Stage1to2
+    SafeWrite(GameAddress(BootScreenStage0to2_Addr), uint32_t(4));
+    SafeWrite(GameAddress(BootScreenStage0to1_Addr), uint32_t(4));
+
+    // Skipping boot screens ends up making the load-screen BGM continue playing even after loading into a save
+    // Nopping out the call that starts that BGM seems to fix it though - I'm not sure why the BGM isn't stopping itself though, boot stage 5 should be handling it afaik...
+    const uint32_t BootScreenPlayBGMCall_Addr[] = { 0x97C5B9, 0x973D09, 0x9A3549, 0x688020, 0xBBA0C3 };
+    uint8_t nop[] = { 0x90, 0x90, 0x90, 0x90, 0x90 };
+    SafeWrite(GameAddress(BootScreenPlayBGMCall_Addr), nop, 5);
+  }
+
   // Change SystemData.dat filename in the 2017 builds, since it seems to be slightly different format to 2021
   // (switching between 2017/2021 builds usually ends up changing settings due to these format differences...)
   char s2017[] = "2017";
   if (version == GameVersion::Steam2017)
     SafeWriteModule(0xEA1CB0 + 8, s2017, 4);
   else if (version == GameVersion::Debug2017)
+  {
     SafeWriteModule(0x1AB8F30 + 8, s2017, 4);
+
+    // Skip IsDebuggerPresent check
+    uint8_t xorEaxEax[] = { 0x31, 0xc0, 0x90, 0x90, 0x90, 0x90 };
+    SafeWriteModule(0xE5D34D, xorEaxEax, 6);
+  }
 
   // 2021 update moved DLC into main depot, skip steam checks since it's always available now
   // Steam checks will interfere if you disable the DLC depots in steam (DLC depots still contain 2017 files, need to disable them to make sure they don't overwrite 2021)

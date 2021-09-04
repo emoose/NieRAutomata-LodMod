@@ -467,7 +467,7 @@ void Debug_PlayerMenuPopulate_Hook()
 	// Let game set it up for us...
 	Debug_PlayerMenuPopulate_Orig();
 
-	if (version != GameVersion::Debug2017 || !Settings.TranslateEnable)
+	if (version != GameVersion::Debug2017 || !Settings.MiscTranslateEnable)
 		return; // lolwut
 
 	std::unordered_map<int, std::tuple<const char*, const char*>> replacements = {
@@ -655,22 +655,24 @@ void Translate_Init()
 {
 	// Need to create a new map at runtime because of stupid C++20 restriction on initing std::string with u8...
 	// (can also be solved by casting to char*, but that's needed for every u8 string inited >.>)
-	if (Settings.TranslateEnable)
+	if (Settings.MiscTranslateEnable)
 		for (auto& kvp : translations)
 			translations_fixed[(char*)kvp.first.c_str()] = kvp.second;
 
 	// Force error to display (win10)
 	// SafeWriteModule(0x283E26, uint16_t(0x9090));
 
-	MH_CreateHook(GameAddress<LPVOID>(Game__ShowMessageBoxVA_Addr), Game__ShowMessageBoxVA_Hook, (LPVOID*)&Game__ShowMessageBoxVA_Orig);
+	if (Settings.MiscFixJapaneseEncoding || Settings.MiscTranslateEnable)
+		MH_CreateHook(GameAddress<LPVOID>(Game__ShowMessageBoxVA_Addr), Game__ShowMessageBoxVA_Hook, (LPVOID*)&Game__ShowMessageBoxVA_Orig);
 
 	if (version == GameVersion::Debug2017)
 	{
 		MH_CreateHook(GameAddress<LPVOID>(0x5067D), Debug_CheckDebugKeysPressed_Hook, (LPVOID*)&Debug_CheckDebugKeysPressed_Orig);
 
-		MH_CreateHook(GameAddress<LPVOID>(0xE491E0), Debug_PrintToConsole_Hook, (LPVOID*)&Debug_PrintToConsole_Orig);
+		if (Settings.MiscFixJapaneseEncoding || Settings.MiscTranslateEnable)
+			MH_CreateHook(GameAddress<LPVOID>(0xE491E0), Debug_PrintToConsole_Hook, (LPVOID*)&Debug_PrintToConsole_Orig);
 
-		if (Settings.TranslateEnable)
+		if (Settings.MiscTranslateEnable)
 		{
 			// Translate text writes to debug-menu pages
 			MH_CreateHook(GameAddress<LPVOID>(0xE4AA70), Debug_PrintToScreen_E4AA70_Hook, (LPVOID*)&Debug_PrintToScreen_E4AA70_Orig);
@@ -681,6 +683,13 @@ void Translate_Init()
 			// Model category "その他" -> "MISC"
 			const char* sMiscCategory = "MISC\0";
 			SafeWriteModule(0x19CD7E0, (char*)sMiscCategory, 5);
+
+			// PhaseJump "ステートクリア" -> "Cleared:" (TODO: not sure what it actually means here)
+			const char* sCleared = "Clear State : \0";
+			SafeWriteModule(0x19CBA80, (char*)sCleared, 15);
+			// PhaseJump "範囲外" -> "OutOfBounds", 
+			const char* sOutOfBounds = "Out Of Bounds\0";
+			SafeWriteModule(0x19CB0EC, (char*)sOutOfBounds, 15);
 
 			// Translate "debug player menu" entries
 			MH_CreateHook(GameAddress<LPVOID>(0x1864060), Debug_PlayerMenuPopulate_Hook, (LPVOID*)&Debug_PlayerMenuPopulate_Orig);
