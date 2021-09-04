@@ -389,7 +389,7 @@ void Game__ShowMessageBoxVA_Hook(const char* Format, va_list ArgList)
 
 	const char* format = converted.c_str();
 
-	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+	if (translations_fixed.count(converted.c_str()))
 		format = translations_fixed[converted];
 
 	char text[2048];
@@ -429,7 +429,7 @@ void Debug_PrintToConsole_Hook(const char* Format, ...)
 	auto converted = sj2utf8(Format);
 	
 	const char* format = Format;
-	if(Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+	if(translations_fixed.count(converted.c_str()))
 		format = translations_fixed[converted];
 
 	char text_buf[2048] = { 0 };
@@ -438,7 +438,7 @@ void Debug_PrintToConsole_Hook(const char* Format, ...)
 
 	// Convert the vsprintf'd output, since they might have used shift-jis in a parameter
 	auto converted2 = sj2utf8(text_buf);
-	if (Settings.TranslateEnable && translations_fixed.count(converted2.c_str()))
+	if (translations_fixed.count(converted2.c_str()))
 		converted2 = translations_fixed[converted2];
 
 	// Then convert UTF8 to UCS-2 so OutputDebugStringW can display it for us
@@ -564,7 +564,7 @@ void Debug_PrintToScreen_E4AA70_Hook(void* a1, void* a2, void* a3, const char* F
 
 	// Check if we have any translation for the Format param, swap it out if so
 	const char* format = Format;
-	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+	if (translations_fixed.count(converted.c_str()))
 			format = translations_fixed[converted];
 
 	return Debug_PrintToScreen_E4AA70_Orig(a1, a2, a3, format, va_list);
@@ -579,7 +579,7 @@ void Debug_sprintf_0x40_Hook(char* output, const char* Format, void* va_list)
 
 	// Check if we have any translation for the Format param, swap it out if so
 	const char* format = Format;
-	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+	if (translations_fixed.count(converted.c_str()))
 		format = translations_fixed[converted];
 
 	return Debug_sprintf_0x40_Orig(output, format, va_list);
@@ -593,7 +593,7 @@ void Debug_sprintf_0x80_Hook(char* output, const char* Format, void* va_list)
 
 	// Check if we have any translation for the Format param, swap it out if so
 	const char* format = Format;
-	if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+	if (translations_fixed.count(converted.c_str()))
 		format = translations_fixed[converted];
 
 	return Debug_sprintf_0x80_Orig(output, format, va_list);
@@ -609,19 +609,55 @@ void TranslateStringPointers(uintptr_t startOffset, int stringOffset, int entryS
 	{
 		char** string = (char**)(cur + stringOffset);
 		auto converted = sj2utf8(*string);
-		if (Settings.TranslateEnable && translations_fixed.count(converted.c_str()))
+		if (translations_fixed.count(converted.c_str()))
 			SafeWrite((uintptr_t)string, (uintptr_t)translations_fixed[converted]);
 
 		cur += entrySize;
 	}
 }
 
+// Allow using keyboard HOME+END to open debug menu, hacky but works
+fn_1args Debug_CheckDebugKeysPressed_Orig;
+void* Debug_CheckDebugKeysPressed_Hook(void* a1)
+{
+	bool openDebug = (GetKeyState(VK_HOME) & 0x8000) && (GetKeyState(VK_END) & 0x8000);
+	if (!openDebug)
+		return Debug_CheckDebugKeysPressed_Orig(a1);
+
+	uint64_t* gameButtonState = GameAddress<uint64_t*>(0x25120B0);
+	auto prevState = *gameButtonState;
+
+	// set gameButtonState to what CheckDebugKeysPressed is checking for
+	// TODO: find what actually sets this - maybe there's already a keyboard bind?
+	*gameButtonState |= 0x20000002000;
+	auto ret = Debug_CheckDebugKeysPressed_Orig(a1);
+
+	// restore gameButtonState after calling the func
+	*gameButtonState = prevState;
+	return ret;
+}
+
+// We (usually) can't overwrite JP strings directly due to space constraints
+// Instead, Translate_Init hooks some key functions used by debug menu & others, where JP text is passed along to the function
+// The hooks simply check the JP text against a pre-translated lookup table, and swap it for our translation where needed
+// Some caveats though:
+// - Sometimes the game passes the JP text over as a parameter to a varargs function, making it harder for us to hook, eg. as a non-format parameter to a sprintf-like function
+//   (we can't just hook the varargs func & check the param, since the param can be literally *anything*, string/int/float/etc, and we have no way to tell)
+//   In these cases hopefully the JP text is loaded indirectly, through an array or table of some kind
+//   The TranslateStringPointers func above is used to go through these arrays & check the string pointers inside against our LUT, overwriting pointer with our TL where possible
+//   It's possible the code might ref the in-memory string directly though, in that case we just have to hope there's enough space for our TL to overwrite it :/
+// 
+// - Debug menu draws a lot of tabulated data to the screen, with the field data usually having the spacing between fields hardcoded inside it
+//   This spacing can be pretty constraining... JP text is of course much more compact than English text.
+//   It's usually possible to adjust the spacing ourselves, but not that simple in most cases.
+//   Might need to start abbreviating the translations for the tables data, or maybe hack some code in to abbreviate it automatically.
 void Translate_Init()
 {
 	// Need to create a new map at runtime because of stupid C++20 restriction on initing std::string with u8...
 	// (can also be solved by casting to char*, but that's needed for every u8 string inited >.>)
-	for (auto& kvp : translations)
-		translations_fixed[(char*)kvp.first.c_str()] = kvp.second;
+	if (Settings.TranslateEnable)
+		for (auto& kvp : translations)
+			translations_fixed[(char*)kvp.first.c_str()] = kvp.second;
 
 	// Force error to display (win10)
 	// SafeWriteModule(0x283E26, uint16_t(0x9090));
@@ -630,13 +666,15 @@ void Translate_Init()
 
 	if (version == GameVersion::Debug2017)
 	{
-		MH_CreateHook(GameAddress<LPVOID>(0xE491E0), Debug_PrintToConsole_Hook, (LPVOID*)&Debug_PrintToConsole_Orig);
+		MH_CreateHook(GameAddress<LPVOID>(0x5067D), Debug_CheckDebugKeysPressed_Hook, (LPVOID*)&Debug_CheckDebugKeysPressed_Orig);
 
-		// Translate text writes to debug-menu pages
-		MH_CreateHook(GameAddress<LPVOID>(0xE4AA70), Debug_PrintToScreen_E4AA70_Hook, (LPVOID*)&Debug_PrintToScreen_E4AA70_Orig);
+		MH_CreateHook(GameAddress<LPVOID>(0xE491E0), Debug_PrintToConsole_Hook, (LPVOID*)&Debug_PrintToConsole_Orig);
 
 		if (Settings.TranslateEnable)
 		{
+			// Translate text writes to debug-menu pages
+			MH_CreateHook(GameAddress<LPVOID>(0xE4AA70), Debug_PrintToScreen_E4AA70_Hook, (LPVOID*)&Debug_PrintToScreen_E4AA70_Orig);
+
 			MH_CreateHook(GameAddress<LPVOID>(0xC838), Debug_sprintf_0x80_Hook, (LPVOID*)&Debug_sprintf_0x80_Orig);
 			MH_CreateHook(GameAddress<LPVOID>(0x2693B), Debug_sprintf_0x40_Hook, (LPVOID*)&Debug_sprintf_0x40_Orig);
 
@@ -671,7 +709,7 @@ void Translate_Init()
 
 			// Tutorials...
 			TranslateStringPointers(0x1419CEA90, 8, 0x18, 13);
-			TranslateStringPointers(0x1419CEBD0, 8, 0x18, 27 - 13);
+			TranslateStringPointers(0x1419CEBD0, 8, 0x18, 14);
 			TranslateStringPointers(0x1419CED20, 8, 0x18, 10);
 			TranslateStringPointers(0x1419CEE10, 8, 0x18, 4);
 			TranslateStringPointers(0x1419CEE70, 8, 0x18, 5);
