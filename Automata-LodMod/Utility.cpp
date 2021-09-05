@@ -170,7 +170,7 @@ std::string sj2utf8(const std::string& input)
     //converting to UTF8
     if (unicodeValue < 0x80)
     {
-      output[indexOutput++] = unicodeValue;
+      output[indexOutput++] = (char)unicodeValue;
     }
     else if (unicodeValue < 0x800)
     {

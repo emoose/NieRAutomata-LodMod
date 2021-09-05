@@ -442,11 +442,11 @@ void Debug_PrintToConsole_Hook(const char* Format, ...)
 		converted2 = translations_fixed[converted2];
 
 	// Then convert UTF8 to UCS-2 so OutputDebugStringW can display it for us
-	int wide_length = MultiByteToWideChar(CP_UTF8, 0, converted2.c_str(), converted2.length(), NULL, 0);
+	int wide_length = MultiByteToWideChar(CP_UTF8, 0, converted2.c_str(), int(converted2.length()), NULL, 0);
 	if (wide_length)
 	{
 		auto wide_ptr = std::make_unique<WCHAR[]>(wide_length + 1);
-		if (MultiByteToWideChar(CP_UTF8, 0, converted2.c_str(), converted2.length(), wide_ptr.get(), wide_length) == wide_length)
+		if (MultiByteToWideChar(CP_UTF8, 0, converted2.c_str(), int(converted2.length()), wide_ptr.get(), wide_length) == wide_length)
 		{
 			wide_ptr.get()[wide_length] = 0; // null-terminate because MBTWC doesn't always do it?
 			OutputDebugStringW(wide_ptr.get());
