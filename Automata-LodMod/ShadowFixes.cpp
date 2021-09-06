@@ -371,19 +371,35 @@ std::unordered_map<uintptr_t, cShadowParam> origShadowParams;
 // likely not proper fn name
 typedef void* (*cBinaryXml__Read_Fn)(struct cBinaryXml* thisptr, uint32_t a2, cObject* output);
 cBinaryXml__Read_Fn cBinaryXml__Read_Orig;
+
+const uint32_t str_cLightDataMinimum_Addr[] = { 0xCD9170, 0xCCE150, 0xD0D410, 0xE71288, 0x1A200B0 };
+const uint32_t str_cLightDataMinimumEv_Addr[] = { 0xCD9188, 0xCCE168, 0xD0D428, 0xE71270, 0x1A200C8 };
+const uint32_t str_cShadowParam_Addr[] = { 0xCACF60, 0xCCDF78, 0xD0D440, 0xE73C48, 0x1A234E8 };
 void* cBinaryXml__Read_Hook(struct cBinaryXml* thisptr, uint32_t a2, cObject* output)
 {
   auto result = cBinaryXml__Read_Orig(thisptr, a2, output);
 
-  // TODO: is there a better way than string compare?
-  if (strcmp(output->GetData()->name, "cShadowParam"))
+  if (!output)
     return result;
 
-  auto* shadowParam = reinterpret_cast<cShadowParam*>(output);
+  auto data = output->GetData();
+  if (!data)
+    return result;
 
-#ifndef _DEBUG
-  UpdateShadowParams(shadowParam);
-#endif
+  if(Settings.MiscDisableVignette && 
+    (data->name == GameAddress<char*>(str_cLightDataMinimum_Addr) || 
+     data->name == GameAddress<char*>(str_cLightDataMinimumEv_Addr)))
+  {
+    // Found light data, let's mess with vignette settings
+    auto* lightData = reinterpret_cast<cLightDataMinimum*>(output);
+    lightData->m_VignettoIntensity = 0; // controls vignette intensity
+    lightData->m_VignettoGradation = 0; // ? not really sure
+  }
+  else if (data->name == GameAddress<char*>(str_cShadowParam_Addr))
+  {
+    auto* shadowParam = reinterpret_cast<cShadowParam*>(output);
+    UpdateShadowParams(shadowParam);
+  }
 
   return result;
 }

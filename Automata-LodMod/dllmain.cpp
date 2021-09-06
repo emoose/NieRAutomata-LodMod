@@ -6,7 +6,7 @@ uintptr_t mBaseAddress;
 
 TCHAR	szIniBuffer[65535];
 
-#define LODMOD_VERSION "0.77.2"
+#define LODMOD_VERSION "0.77.3"
 
 #ifdef _DEBUG
 bool enableIniUpdateThread = false;
@@ -54,6 +54,7 @@ LodModSettings Settings = {
   .MiscTranslateEnable = true,
   .MiscSkipIntroMovies = false,
   .MiscSkipBootingScreens = false,
+  .MiscDisableVignette = false,
 };
 
 GameVersion version; // which GameVersion we're injected into
@@ -243,6 +244,7 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.MiscTranslateEnable = INI_GetBool(iniPath, L"Misc", L"TranslateEnable", Settings.MiscTranslateEnable);
   Settings.MiscSkipIntroMovies = INI_GetBool(iniPath, L"Misc", L"SkipIntroMovies", Settings.MiscSkipIntroMovies);
   Settings.MiscSkipBootingScreens = INI_GetBool(iniPath, L"Misc", L"SkipBootingScreens", Settings.MiscSkipBootingScreens);
+  Settings.MiscDisableVignette = INI_GetBool(iniPath, L"Misc", L"DisableVignette", Settings.MiscDisableVignette);
 
   ReadShadowCascadeAlgorithm(L"ShadowCascadeAlgorithm");
 
