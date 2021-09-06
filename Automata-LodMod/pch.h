@@ -75,6 +75,7 @@ struct LodModSettings
   float ShadowDistanceMinimum;
   float ShadowDistanceMaximum;
   float ShadowDistanceMultiplier;
+  float ShadowDistancePSS;
   bool DisableManualCulling;
   float ShadowFilterStrengthBias;
   float ShadowFilterStrengthMinimum;

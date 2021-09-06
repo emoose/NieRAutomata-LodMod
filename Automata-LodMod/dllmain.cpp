@@ -8,6 +8,10 @@ TCHAR	szIniBuffer[65535];
 
 #define LODMOD_VERSION "0.77.2"
 
+#ifdef _DEBUG
+bool enableIniUpdateThread = false;
+#endif
+
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 
 // Address of PE header timestamp, so we can check what EXE is being used
@@ -31,6 +35,7 @@ LodModSettings Settings = {
   .ShadowDistanceMinimum = 0,
   .ShadowDistanceMaximum = 0,
   .ShadowDistanceMultiplier = 1,
+  .ShadowDistancePSS = 0,
   .DisableManualCulling = false,
   .ShadowFilterStrengthBias = 0,
   .ShadowFilterStrengthMinimum = 0,
@@ -221,6 +226,7 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.ShadowDistanceMultiplier = INI_GetFloat(iniPath, L"LodMod", L"ShadowDistanceMultiplier", Settings.ShadowDistanceMultiplier);
   Settings.ShadowDistanceMinimum = INI_GetFloat(iniPath, L"LodMod", L"ShadowDistanceMinimum", Settings.ShadowDistanceMinimum);
   Settings.ShadowDistanceMaximum = INI_GetFloat(iniPath, L"LodMod", L"ShadowDistanceMaximum", Settings.ShadowDistanceMaximum);
+  Settings.ShadowDistancePSS = INI_GetFloat(iniPath, L"LodMod", L"ShadowDistancePSS", Settings.ShadowDistancePSS);
   Settings.ShadowResolution = GetPrivateProfileIntW(L"LodMod", L"ShadowResolution", Settings.ShadowResolution, iniPath);
   Settings.ShadowFilterStrengthBias = INI_GetFloat(iniPath, L"LodMod", L"ShadowFilterStrengthBias", Settings.ShadowFilterStrengthBias);
   Settings.ShadowFilterStrengthMinimum = INI_GetFloat(iniPath, L"LodMod", L"ShadowFilterStrengthMinimum", Settings.ShadowFilterStrengthMinimum);
@@ -311,7 +317,7 @@ void Settings_ReadINI(const WCHAR* iniPath)
     Settings.HQMapSlots = 7;
 
 #ifdef _DEBUG
-  if (!hIniUpdateThread)
+  if (!hIniUpdateThread && enableIniUpdateThread)
     hIniUpdateThread = CreateThread(
       NULL,                   // default security attributes
       0,                      // use default stack size

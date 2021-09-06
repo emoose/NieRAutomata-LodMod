@@ -313,20 +313,42 @@ void UpdateShadowParams(cShadowParam* shadowParam)
 
     if (!algorithm_success)
     {
-      // algorithm failed or no algorithm provided, fall back to previous impl...
-      // figure out the old cascade ratios
-      // (this is only run when distance is being updated first time for this area)
-
-      float ratios[] = {
-        distances[1] / distances[0],
-        distances[2] / distances[0],
-        distances[3] / distances[0]
-      };
-
       new_distances[0] = new_distance; // in case algorithm set it & failed...
-      new_distances[1] = new_distances[0] * ratios[0];
-      new_distances[2] = new_distances[0] * ratios[1];
-      new_distances[3] = new_distances[0] * ratios[2];
+
+      // algorithm failed or no algorithm provided, fall back to previous impl...
+      if (Settings.ShadowDistancePSS)
+      {
+        // PSS shadowing (Practical Split Scheme)
+        // Almost eliminates the shadow-disappearing-on-edges bug, and makes most of the shadow-cascade seams nearly invisible
+
+        float near_dist = 1;
+        float far_dist = Settings.ShadowDistancePSS;
+        float num_cascades = 4.f;
+
+        float lambda = 0.75f;
+        float ratio = far_dist / near_dist;
+        // Skip first cascade, PSS makes it too large (hence too blurry)
+        for (int i = 2; i < 4; i++)
+        {
+          float si = i / num_cascades;
+          float neard = lambda * (near_dist * powf(ratio, si)) + (1 - lambda) * (near_dist + (far_dist - near_dist) * si);
+          new_distances[i - 1] = neard;
+        }
+      }
+      else
+      {
+        // figure out the old cascade ratios
+
+        float ratios[] = {
+          distances[1] / distances[0],
+          distances[2] / distances[0],
+          distances[3] / distances[0]
+        };
+
+        new_distances[1] = new_distances[0] * ratios[0];
+        new_distances[2] = new_distances[0] * ratios[1];
+        new_distances[3] = new_distances[0] * ratios[2];
+      }
     }
 
     if (Settings.DebugLog)
