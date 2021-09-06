@@ -1,12 +1,5 @@
 #include "pch.h"
 
-#include <vector>
-#include <cstdint>
-#include "SDK.h"
-#include "MinHook/MinHook.h"
-#include <string>
-#include <sstream>
-
 const uint32_t MovieFileHeapSize_Addr[] = { 0x86BA27 + 1, 0x8632C7 + 1, 0x8927E7 + 1, 0x644852 + 2, 0xA0F86A + 1 };
 const uint32_t MovieVramHeapSize_Addr[] = { 0x86BC8F + 1, 0x86352F + 1, 0x892A4F + 1, 0x644B85 + 2, 0xA0FAD2 + 1 };
 const uint32_t cMemoryDeviceBase__createHeap_Addr[] = { 0x2622B0, 0x25B3B0, 0x2452D0, 0x91FCC0, 0xE1BA10 };

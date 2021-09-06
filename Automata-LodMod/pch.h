@@ -20,7 +20,9 @@
 #include <thread>
 #endif
 
-#include "MinHook/MinHook.h"
+#include "third_party/MinHook/MinHook.h"
+#include "third_party/DeskCalc/SymbolTable.hpp"
+#include "third_party/DeskCalc/Parser.hpp"
 
 #include "SDK.h"
 #include "CriUSM.h"
@@ -80,6 +82,7 @@ struct LodModSettings
   float ShadowFilterStrengthMaximum;
   bool ShadowModelHQ;
   bool ShadowModelForceAll;
+  std::string ShadowCascadeAlgorithm;
   int CommunicationScreenResolution;
   int HQMapSlots;
   WCHAR WrapperLoadLibrary[4096];
@@ -114,6 +117,11 @@ void Proxy_InitSteamStub();
 void Translate_Init();
 
 // Utility.cpp
+std::string ltrim(const std::string& s);
+std::string rtrim(const std::string& s);
+std::string trim(const std::string& s);
+std::string utf8_encode(const std::wstring& wstr);
+
 std::string sj2utf8(const std::string& input);
 bool FileExists(const WCHAR* Filename);
 bool DirExists(const WCHAR* DirPath);

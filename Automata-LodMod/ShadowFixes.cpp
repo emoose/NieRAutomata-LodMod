@@ -268,20 +268,47 @@ void UpdateShadowParams(cShadowParam* shadowParam)
   if (Settings.ShadowDistanceMaximum > 0 && new_distances[0] > Settings.ShadowDistanceMaximum)
     new_distances[0] = Settings.ShadowDistanceMaximum;
 
-  if (new_distances[0] != distances[0])
+  if (new_distances[0] != distances[0] || !Settings.ShadowCascadeAlgorithm.empty())
   {
-    // figure out the old cascade ratios
-    // (this is only run when distance is being updated first time for this area)
+    if (Settings.ShadowCascadeAlgorithm.empty())
+    {
+      // no algorithm provided, fall back to previous impl...
+      // figure out the old cascade ratios
+      // (this is only run when distance is being updated first time for this area)
 
-    float ratios[] = {
-      distances[1] / distances[0],
-      distances[2] / distances[0],
-      distances[3] / distances[0]
-    };
+      float ratios[] = {
+        distances[1] / distances[0],
+        distances[2] / distances[0],
+        distances[3] / distances[0]
+      };
 
-    new_distances[1] = new_distances[0] * ratios[0];
-    new_distances[2] = new_distances[0] * ratios[1];
-    new_distances[3] = new_distances[0] * ratios[2];
+      new_distances[1] = new_distances[0] * ratios[0];
+      new_distances[2] = new_distances[0] * ratios[1];
+      new_distances[3] = new_distances[0] * ratios[2];
+    }
+    else
+    {
+      // We have an algorithm to run!
+      SymbolTable symbols;
+      symbols.set_var("distance0", new_distances[0]);
+      symbols.set_var("original0", distances[0]);
+      symbols.set_var("original1", distances[1]);
+      symbols.set_var("original2", distances[2]);
+      symbols.set_var("original3", distances[3]);
+      symbols.set_var("cascade0", new_distances[0]);
+      symbols.set_var("cascade1", new_distances[1]);
+      symbols.set_var("cascade2", new_distances[2]);
+      symbols.set_var("cascade3", new_distances[3]);
+
+      Parser parser(symbols);
+      parser.parse(Settings.ShadowCascadeAlgorithm);
+
+      new_distances[0] = float(symbols.value_of("cascade0").real());
+      new_distances[1] = float(symbols.value_of("cascade1").real());
+      new_distances[2] = float(symbols.value_of("cascade2").real());
+      new_distances[3] = float(symbols.value_of("cascade3").real());
+      new_distances[0] = new_distances[0];
+    }
 
     if (Settings.DebugLog)
     {

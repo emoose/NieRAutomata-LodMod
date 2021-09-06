@@ -1,8 +1,5 @@
 #include "pch.h"
 
-#include "SDK.h"
-#include "MinHook/MinHook.h"
-
 // Rebug: hooks to add some debug-flag checks back into functions, based on NA debug exe
 
 // Configurables:

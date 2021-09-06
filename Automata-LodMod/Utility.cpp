@@ -1,5 +1,33 @@
 #include "pch.h"
 
+const std::string WHITESPACE = " \n\r\t\f\v";
+
+std::string ltrim(const std::string& s)
+{
+  size_t start = s.find_first_not_of(WHITESPACE);
+  return (start == std::string::npos) ? "" : s.substr(start);
+}
+
+std::string rtrim(const std::string& s)
+{
+  size_t end = s.find_last_not_of(WHITESPACE);
+  return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+}
+
+std::string trim(const std::string& s)
+{
+  return rtrim(ltrim(s));
+}
+
+std::string utf8_encode(const std::wstring& wstr)
+{
+  if (wstr.empty()) return std::string();
+  int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+  std::string strTo(size_needed, 0);
+  WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+  return strTo;
+}
+
 bool INI_GetBool(const WCHAR* IniPath, const WCHAR* Section, const WCHAR* Key, bool DefaultValue)
 {
   WCHAR IniData[256];
@@ -39,7 +67,7 @@ bool GetModuleName(HMODULE module, WCHAR* destBuf, int bufLength)
   GetModuleFileName(module, destBuf, bufLength);
   size_t len = wcslen(destBuf);
   size_t lastPathSep = 0;
-  for (size_t i = len - 2; i >= 0; i--)
+  for (int64_t i = len - 2; i >= 0; i--)
   {
     if (destBuf[i] == '\\' || destBuf[i] == '/')
     {
@@ -62,7 +90,7 @@ bool GetModuleFolder(HMODULE module, WCHAR* destBuf, int bufLength)
   GetModuleFileName(module, destBuf, bufLength);
   size_t len = wcslen(destBuf);
   size_t lastPathSep = 0;
-  for (size_t i = len - 2; i >= 0; i--)
+  for (int64_t i = len - 2; i >= 0; i--)
   {
     if (destBuf[i] == '\\' || destBuf[i] == '/')
     {
@@ -146,7 +174,7 @@ std::string sj2utf8(const std::string& input)
 
   while (indexInput < input.length())
   {
-    char arraySection = ((uint8_t)input[indexInput]) >> 4;
+    char arraySection = (uint8_t)(input[indexInput]) >> 4;
 
     size_t arrayOffset;
     if (arraySection == 0x8) arrayOffset = 0x100; //these are two-byte shiftjis
@@ -157,11 +185,11 @@ std::string sj2utf8(const std::string& input)
     //determining real array offset
     if (arrayOffset)
     {
-      arrayOffset += (((uint8_t)input[indexInput]) & 0xf) << 8;
+      arrayOffset += size_t(uint8_t(input[indexInput]) & 0xf) << 8;
       indexInput++;
       if (indexInput >= input.length()) break;
     }
-    arrayOffset += (uint8_t)input[indexInput++];
+    arrayOffset += uint8_t(input[indexInput++]);
     arrayOffset <<= 1;
 
     //unicode number is...
@@ -170,7 +198,7 @@ std::string sj2utf8(const std::string& input)
     //converting to UTF8
     if (unicodeValue < 0x80)
     {
-      output[indexOutput++] = (char)unicodeValue;
+      output[indexOutput++] = char(unicodeValue);
     }
     else if (unicodeValue < 0x800)
     {

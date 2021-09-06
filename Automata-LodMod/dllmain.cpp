@@ -4,6 +4,8 @@ HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
+TCHAR	szIniBuffer[65535];
+
 #define LODMOD_VERSION "0.77.1"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
@@ -35,6 +37,7 @@ LodModSettings Settings = {
   .ShadowFilterStrengthMaximum = 0,
   .ShadowModelHQ = false,
   .ShadowModelForceAll = false,
+  .ShadowCascadeAlgorithm = "",
   .CommunicationScreenResolution = 256,
   .HQMapSlots = 7,
   .WrapperLoadLibrary = { 0 },
@@ -57,6 +60,19 @@ WCHAR LogPath[4096];
 WCHAR GameDir[4096] = { 0 };
 bool GotGameDir = false;
 
+void ReadShadowCascadeAlgorithm(const wchar_t* sectionName)
+{
+  szIniBuffer[0] = 0;
+  Settings.ShadowCascadeAlgorithm.clear();
+
+  if (!GetPrivateProfileSection(sectionName, szIniBuffer, 65535, IniPath))
+    return;
+
+  // GetPrivateProfileSection already filtered out comment lines for us, nice!
+
+  Settings.ShadowCascadeAlgorithm = trim(utf8_encode(szIniBuffer));
+}
+
 #ifdef _DEBUG
 HANDLE hIniUpdateThread;
 DWORD dwIniUpdateThread;
@@ -72,6 +88,7 @@ DWORD WINAPI IniUpdateThread(LPVOID lpParam)
     Settings.ShadowFilterStrengthBias = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthBias", 0);
     Settings.ShadowFilterStrengthMinimum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMinimum", 0);
     Settings.ShadowFilterStrengthMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMaximum", 0);
+    ReadShadowCascadeAlgorithm(L"ShadowCascadeAlgorithm");
   }
 }
 #endif
@@ -210,9 +227,13 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.MiscSkipIntroMovies = INI_GetBool(iniPath, L"Misc", L"SkipIntroMovies", Settings.MiscSkipIntroMovies);
   Settings.MiscSkipBootingScreens = INI_GetBool(iniPath, L"Misc", L"SkipBootingScreens", Settings.MiscSkipBootingScreens);
 
+  ReadShadowCascadeAlgorithm(L"ShadowCascadeAlgorithm");
+
+  dlog("ShadowCascadeAlgorithm:\n%s\n\n", Settings.ShadowCascadeAlgorithm.c_str());
+
   WCHAR encryptionKey[256];
   int sz = sizeof(encryptionKey);
-  if (GetPrivateProfileStringW(L"Movies", L"EncryptionKey", L"0", encryptionKey, sizeof(encryptionKey), iniPath))
+  if (GetPrivateProfileStringW(L"Movies", L"EncryptionKey", L"0", encryptionKey, 256, iniPath))
   {
     uint64_t value = std::stoull(encryptionKey, nullptr, 0);
     if (value != 0)
@@ -314,18 +335,16 @@ void Settings_LoadAllFromPath(const std::filesystem::path& path)
 
 std::unordered_map<std::wstring, HANDLE> LoadedPlugins;
 
-TCHAR	szIniBuffer[65535];
 int LoadExtraPlugins(const wchar_t* listName, std::unordered_map<std::wstring, HANDLE>& list)
 {
   szIniBuffer[0] = 0;
-
-  int count = 0;
 
   if (GetPrivateProfileSection(listName, szIniBuffer, 65535, IniPath))
     dlog("LoadExtraPlugins: loading plugins\n");
   else
     return 0;
 
+  int count = 0;
   TCHAR* curString = szIniBuffer;
   for (TCHAR* cp = szIniBuffer; ; cp++)
   {

@@ -109,10 +109,10 @@ class CriUtfField
 	CriUtfFieldDesc* field_info;
 
 public:
-	uint8_t value_u8;
-	uint16_t value_u16;
-	uint32_t value_u32;
-	uint64_t value_u64;
+	uint8_t value_u8 = 0;
+	uint16_t value_u16 = 0;
+	uint32_t value_u32 = 0;
+	uint64_t value_u64 = 0;
 
 	std::string value_string;
 
@@ -156,7 +156,7 @@ public:
 
 class CriUtf
 {
-	CriUtfHeader header;
+	CriUtfHeader header = { 0 };
 	char* string_table = nullptr;
 
 	std::vector<CriUtfFieldDesc> field_info;
@@ -199,10 +199,10 @@ struct CriUsmChunkHeader
 class CriUsm
 {
 public:
-	CriUsmChunkHeader crid_header;
+	CriUsmChunkHeader crid_header = { 0 };
 	CriUtf crid_utf;
 
-	CriUsmChunkHeader sfv_header;
+	CriUsmChunkHeader sfv_header = { 0 };
 	CriUtf sfv_utf;
 
 	bool read(std::ifstream& stream);
