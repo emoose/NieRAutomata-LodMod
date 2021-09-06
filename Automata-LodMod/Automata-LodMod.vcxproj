@@ -186,7 +186,6 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
     <ClInclude Include="pch.h" />
     <ClInclude Include="SDK.h" />
     <ClInclude Include="SDKEnums.h" />
-    <ClInclude Include="sjis_table.h" />
     <ClInclude Include="third_party\DeskCalc\ErrorReporter.hpp" />
     <ClInclude Include="third_party\DeskCalc\Function.hpp" />
     <ClInclude Include="third_party\DeskCalc\isviewstream.hpp" />
@@ -205,6 +204,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
     <ClInclude Include="third_party\MinHook\hde\table64.h" />
     <ClInclude Include="third_party\MinHook\MinHook.h" />
     <ClInclude Include="third_party\MinHook\trampoline.h" />
+    <ClInclude Include="third_party\sjis_table.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AOFixes.cpp" />

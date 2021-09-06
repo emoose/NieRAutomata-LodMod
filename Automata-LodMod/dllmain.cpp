@@ -6,7 +6,7 @@ uintptr_t mBaseAddress;
 
 TCHAR	szIniBuffer[65535];
 
-#define LODMOD_VERSION "0.77.1"
+#define LODMOD_VERSION "0.77.2"
 
 const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
 

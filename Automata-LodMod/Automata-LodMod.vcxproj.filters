@@ -27,13 +27,13 @@
     <ClInclude Include="CriUSM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sjis_table.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="third_party\DeskCalc\ErrorReporter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="third_party\DeskCalc\Function.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\DeskCalc\isviewstream.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="third_party\DeskCalc\math_util.hpp">
@@ -81,7 +81,7 @@
     <ClInclude Include="third_party\MinHook\trampoline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="third_party\DeskCalc\isviewstream.hpp">
+    <ClInclude Include="third_party\sjis_table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

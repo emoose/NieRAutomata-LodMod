@@ -166,7 +166,7 @@ void dlog(const char* Format, ...)
 }
 
 // https://stackoverflow.com/questions/33165171/c-shiftjis-to-utf8-conversion
-#include "sjis_table.h"
+#include "third_party/sjis_table.h"
 std::string sj2utf8(const std::string& input)
 {
   std::string output(3 * input.length(), ' '); //ShiftJis won't give 4byte UTF8, so max. 3 byte per input char are needed

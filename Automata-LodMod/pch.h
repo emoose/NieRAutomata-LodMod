@@ -58,7 +58,6 @@ inline T GameAddress(uint32_t addr)
   return reinterpret_cast<T>(mBaseAddress + addr);
 }
 
-
 void LodMod_Init();
 
 void ShadowFixes_Init(); // ShadowFixes.cpp
