@@ -93,7 +93,7 @@ void BehaviorScr::SetCastShadows(bool castsShadows)
 
             // debug2017 build adds 0x10 bytes to ModelEntry struct, so add that offset to our ptr...
             if (version == GameVersion::Debug2017)
-              modelName = (const char**)((uint8_t*)modelName + (pair->ModelIndex * 0x10));
+              modelName = (const char**)((uint8_t*)modelName + (size_t(pair->ModelIndex) * 0x10));
 
             auto* shadowInfo = &shadowList->Entries[pair->ShadowModelIndex];
 
@@ -270,9 +270,50 @@ void UpdateShadowParams(cShadowParam* shadowParam)
 
   if (new_distances[0] != distances[0] || !Settings.ShadowCascadeAlgorithm.empty())
   {
-    if (Settings.ShadowCascadeAlgorithm.empty())
+    float new_distance = new_distances[0];
+    bool algorithm_success = false;
+    if (!Settings.ShadowCascadeAlgorithm.empty())
     {
-      // no algorithm provided, fall back to previous impl...
+      // We have an algorithm to run!
+      try
+      {
+        SymbolTable symbols;
+        symbols.set_var("distance0", new_distances[0]);
+        symbols.set_var("original0", distances[0]);
+        symbols.set_var("original1", distances[1]);
+        symbols.set_var("original2", distances[2]);
+        symbols.set_var("original3", distances[3]);
+        symbols.set_var("cascade0", new_distances[0]);
+        symbols.set_var("cascade1", new_distances[1]);
+        symbols.set_var("cascade2", new_distances[2]);
+        symbols.set_var("cascade3", new_distances[3]);
+
+        Parser parser(symbols);
+        parser.parse(Settings.ShadowCascadeAlgorithm);
+
+        new_distances[0] = float(symbols.value_of("cascade0").real());
+        new_distances[1] = float(symbols.value_of("cascade1").real());
+        new_distances[2] = float(symbols.value_of("cascade2").real());
+        new_distances[3] = float(symbols.value_of("cascade3").real());
+        new_distances[0] = new_distances[0];
+
+        algorithm_success = true;
+      }
+      catch (const std::runtime_error& e) {
+        dlog("UpdateShadowParams: runtime_error while parsing algorithm: %s\n", e.what());
+        Settings.ShadowCascadeAlgorithm.clear();
+        algorithm_success = false;
+      }
+      catch (...) {
+        dlog("UpdateShadowParams: unknown exception while parsing algorithm\n");
+        Settings.ShadowCascadeAlgorithm.clear();
+        algorithm_success = false;
+      }
+    }
+
+    if (!algorithm_success)
+    {
+      // algorithm failed or no algorithm provided, fall back to previous impl...
       // figure out the old cascade ratios
       // (this is only run when distance is being updated first time for this area)
 
@@ -282,32 +323,10 @@ void UpdateShadowParams(cShadowParam* shadowParam)
         distances[3] / distances[0]
       };
 
+      new_distances[0] = new_distance; // in case algorithm set it & failed...
       new_distances[1] = new_distances[0] * ratios[0];
       new_distances[2] = new_distances[0] * ratios[1];
       new_distances[3] = new_distances[0] * ratios[2];
-    }
-    else
-    {
-      // We have an algorithm to run!
-      SymbolTable symbols;
-      symbols.set_var("distance0", new_distances[0]);
-      symbols.set_var("original0", distances[0]);
-      symbols.set_var("original1", distances[1]);
-      symbols.set_var("original2", distances[2]);
-      symbols.set_var("original3", distances[3]);
-      symbols.set_var("cascade0", new_distances[0]);
-      symbols.set_var("cascade1", new_distances[1]);
-      symbols.set_var("cascade2", new_distances[2]);
-      symbols.set_var("cascade3", new_distances[3]);
-
-      Parser parser(symbols);
-      parser.parse(Settings.ShadowCascadeAlgorithm);
-
-      new_distances[0] = float(symbols.value_of("cascade0").real());
-      new_distances[1] = float(symbols.value_of("cascade1").real());
-      new_distances[2] = float(symbols.value_of("cascade2").real());
-      new_distances[3] = float(symbols.value_of("cascade3").real());
-      new_distances[0] = new_distances[0];
     }
 
     if (Settings.DebugLog)

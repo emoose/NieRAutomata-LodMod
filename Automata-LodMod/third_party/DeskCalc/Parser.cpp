@@ -20,7 +20,7 @@ void Parser::parse(std::istream& is)
     parse();
 }
 
-void Parser::parse(const std::string& str)
+void Parser::parse(std::string_view str)
 {
     ts.set_input(str);
     parse();

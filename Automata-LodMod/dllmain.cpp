@@ -69,6 +69,17 @@ void ReadShadowCascadeAlgorithm(const wchar_t* sectionName)
     return;
 
   // GetPrivateProfileSection already filtered out comment lines for us, nice!
+  // except it also turned new-lines into null characters, ugh, need to convert them back
+
+  for (TCHAR* cp = szIniBuffer; ; cp++)
+  {
+    if (!cp[0])
+    {
+      cp[0] = '\n';
+      if (!cp[1]) // two null chars signal end of string
+        break;
+    }
+  }
 
   Settings.ShadowCascadeAlgorithm = trim(utf8_encode(szIniBuffer));
 }

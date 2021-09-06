@@ -10,7 +10,7 @@ public:
     TokenStream() = default;
     explicit TokenStream(std::istream& input);
     explicit TokenStream(std::istream* input);
-    explicit TokenStream(const std::string& input);
+    explicit TokenStream(std::string_view input);
 
     ~TokenStream();
 
@@ -19,7 +19,7 @@ public:
 
     void set_input(std::istream& input);
     void set_input(std::istream* input);
-    void set_input(const std::string& input);
+    void set_input(std::string_view input);
 
     Token get();
     const Token& current() const { return ct; }

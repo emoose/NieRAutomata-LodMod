@@ -18,30 +18,6 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MinHook\buffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MinHook\MinHook.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MinHook\trampoline.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MinHook\hde\hde32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MinHook\hde\hde64.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MinHook\hde\pstdint.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MinHook\hde\table32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MinHook\hde\table64.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SDK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -81,6 +57,33 @@
     <ClInclude Include="third_party\DeskCalc\types.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="third_party\MinHook\buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\MinHook\hde\hde32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\MinHook\hde\hde64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\MinHook\hde\pstdint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\MinHook\hde\table32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\MinHook\hde\table64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\MinHook\MinHook.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\MinHook\trampoline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\DeskCalc\isviewstream.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -93,21 +96,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Utility.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MinHook\buffer.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MinHook\hook.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MinHook\trampoline.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MinHook\hde\hde32.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MinHook\hde\hde64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Rebug.cpp">
@@ -153,6 +141,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="third_party\DeskCalc\TokenStream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\MinHook\hde\hde32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\MinHook\hde\hde64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\MinHook\buffer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\MinHook\hook.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\MinHook\trampoline.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

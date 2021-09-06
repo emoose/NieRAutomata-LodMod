@@ -16,7 +16,7 @@ public:
     Parser(SymbolTable& table);
 
     void parse(std::istream& is);
-    void parse(const std::string& input);
+    void parse(std::string_view input);
 
     const Complex& result() const { return res; }
     bool has_result() const { return hasResult; }

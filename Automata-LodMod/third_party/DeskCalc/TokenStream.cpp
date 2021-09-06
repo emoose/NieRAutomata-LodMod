@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include "isviewstream.hpp"
 
 TokenStream::TokenStream(std::istream& is)
     : input{ &is } { }
@@ -12,8 +13,8 @@ TokenStream::TokenStream(std::istream& is)
 TokenStream::TokenStream(std::istream* is)
     : input{ is }, ownsInput{ true } { }
 
-TokenStream::TokenStream(const std::string& str)
-    : input{ new std::istringstream{str} }, ownsInput{ true } { }
+TokenStream::TokenStream(std::string_view str)
+    : input{ new isviewstream{str} }, ownsInput{ true } { }
 
 TokenStream::~TokenStream()
 {
@@ -33,9 +34,9 @@ void TokenStream::set_input(std::istream* is)
     ownsInput = true;
 }
 
-void TokenStream::set_input(const std::string& str)
+void TokenStream::set_input(std::string_view str)
 {
-    set_input(new std::istringstream{ str });
+    set_input(new isviewstream{ str });
 }
 
 static constexpr unsigned char uchar(char ch)
