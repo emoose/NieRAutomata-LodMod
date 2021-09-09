@@ -6,7 +6,7 @@ uintptr_t mBaseAddress;
 
 TCHAR	szIniBuffer[65535];
 
-#define LODMOD_VERSION "0.77.3"
+#define LODMOD_VERSION "0.77.4"
 
 #ifdef _DEBUG
 bool enableIniUpdateThread = false;
