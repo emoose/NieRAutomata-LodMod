@@ -94,6 +94,7 @@ struct LodModSettings
   bool MiscTranslateEnable;
   bool MiscSkipIntroMovies;
   bool MiscSkipBootingScreens;
+  bool MiscMakeIntroScreenLoadGame;
   bool MiscDisableVignette;
 };
 extern LodModSettings Settings;

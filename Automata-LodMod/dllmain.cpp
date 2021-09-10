@@ -54,6 +54,7 @@ LodModSettings Settings = {
   .MiscTranslateEnable = true,
   .MiscSkipIntroMovies = false,
   .MiscSkipBootingScreens = false,
+  .MiscMakeIntroScreenLoadGame = false,
   .MiscDisableVignette = false,
 };
 
@@ -244,6 +245,7 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.MiscTranslateEnable = INI_GetBool(iniPath, L"Misc", L"TranslateEnable", Settings.MiscTranslateEnable);
   Settings.MiscSkipIntroMovies = INI_GetBool(iniPath, L"Misc", L"SkipIntroMovies", Settings.MiscSkipIntroMovies);
   Settings.MiscSkipBootingScreens = INI_GetBool(iniPath, L"Misc", L"SkipBootingScreens", Settings.MiscSkipBootingScreens);
+  Settings.MiscMakeIntroScreenLoadGame = INI_GetBool(iniPath, L"Misc", L"MakeIntroScreenLoadGame", Settings.MiscMakeIntroScreenLoadGame);
   Settings.MiscDisableVignette = INI_GetBool(iniPath, L"Misc", L"DisableVignette", Settings.MiscDisableVignette);
 
   ReadShadowCascadeAlgorithm(L"ShadowCascadeAlgorithm");
@@ -423,6 +425,31 @@ void LodMod_Init()
   Translate_Init();
 
   MH_EnableHook(MH_ALL_HOOKS);
+
+  if (Settings.MiscMakeIntroScreenLoadGame && version == GameVersion::Win10)
+  {
+    // TODO: figure out a cleaner way to do this...
+
+    // Set NewGameLoadGame menu to "Load Game" mode (a1 + 0x28 = 1)
+    // (overwrites code that would setup "press key to start" text
+    uint8_t loadMode[] = { 0xc7, 0x43, 0x28, 0x01, 0x00, 0x00, 0x00 };
+    SafeWriteModule(0x99076F, loadMode, 7);
+
+    // Skip intro-screen wait, go to TitleScreen::AdvanceToNext state nearly immediately
+    // ("nearly" because it has to init some stuff first for things to work)
+    SafeWriteModule(0x99077C + 3, uint32_t(8));
+
+    // Skip some check before it updates MenuState
+    SafeWriteModule(0x9908F6, uint16_t(0x9090));
+
+    // Make it set MenuState to NewGameLoadGame instead
+    SafeWriteModule(0x9908F8 + 3, uint32_t(MainMenuState::NewGameLoadGame));
+
+    // Prevent intro animation from playing
+    // (commented out because it stops intro 'area' from loading...)
+    //uint8_t nop[] = { 0x90, 0x90, 0x90, 0x90, 0x90 };
+    //SafeWriteModule(0x8909BD, nop, 5);
+  }
 
   if (Settings.MiscSkipIntroMovies)
   {

@@ -24,6 +24,17 @@ typedef void* (*fn_0args)();
 
 #pragma pack(push, 1)
 
+enum MainMenuState
+{
+  Initial = 0,
+  Unk1 = 1,
+  TitleScreen = 2,
+  MainMenu = 3,
+  NewGameLoadGame = 4, // newgame = +0x28 = 0, loadgame = +0x28 = 1
+
+  AttractMovie = 0xC,
+};
+
 struct dbFlag
 {
   const char* Name;
