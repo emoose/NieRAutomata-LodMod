@@ -169,7 +169,9 @@ public:
   /* 0x584 */ uint32_t AmbientOcclusionAllowed; // "AO_OFF" sets to 0
   /* 0x588 */ uint32_t Unk588;
   /* 0x58C */ uint32_t Unk58C;
-  /* 0x590 */ uint8_t Unk590[0x58];
+  /* 0x590 */ uint8_t Unk590[0x28];
+  /* 0x5B8 */ int ObjectId;
+  /* 0x5BC */ uint8_t Unk5BC[0x2C];
   /* 0x5E8 */ float BloomStrength; // always 0 or 1 ?
   /* 0x5EC */ uint32_t Unk5EC;
   /* 0x5F0 */ uint32_t Unk5F0;
