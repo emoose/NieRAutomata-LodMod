@@ -93,6 +93,7 @@ struct LodModSettings
   bool MiscSkipBootingScreens;
   bool MiscMakeIntroScreenLoadGame;
   bool MiscDisableVignette;
+  bool MiscDisableFakeHDR;
 };
 extern LodModSettings Settings;
 extern uintptr_t mBaseAddress;

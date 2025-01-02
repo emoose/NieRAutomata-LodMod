@@ -6,7 +6,7 @@ uintptr_t mBaseAddress;
 
 TCHAR	szIniBuffer[65535];
 
-#define LODMOD_VERSION "0.77.4"
+#define LODMOD_VERSION "0.77.5"
 
 #ifdef _DEBUG
 bool enableIniUpdateThread = false;
@@ -55,6 +55,7 @@ LodModSettings Settings = {
   .MiscSkipBootingScreens = false,
   .MiscMakeIntroScreenLoadGame = false,
   .MiscDisableVignette = false,
+  .MiscDisableFakeHDR = false
 };
 
 GameVersion version; // which GameVersion we're injected into
@@ -221,6 +222,7 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.MiscSkipBootingScreens = INI_GetBool(iniPath, L"Misc", L"SkipBootingScreens", Settings.MiscSkipBootingScreens);
   Settings.MiscMakeIntroScreenLoadGame = INI_GetBool(iniPath, L"Misc", L"MakeIntroScreenLoadGame", Settings.MiscMakeIntroScreenLoadGame);
   Settings.MiscDisableVignette = INI_GetBool(iniPath, L"Misc", L"DisableVignette", Settings.MiscDisableVignette);
+  Settings.MiscDisableFakeHDR = INI_GetBool(iniPath, L"Misc", L"DisableFakeHDR", Settings.MiscDisableFakeHDR);
 
   WCHAR encryptionKey[256];
   int sz = sizeof(encryptionKey);
@@ -440,6 +442,11 @@ void LodMod_Init()
     const uint32_t BootScreenPlayBGMCall_Addr[] = { 0x97C5B9, 0x973D09, 0x9A3549, 0x688020, 0xBBA0C3 };
     uint8_t nop[] = { 0x90, 0x90, 0x90, 0x90, 0x90 };
     SafeWrite(GameAddress(BootScreenPlayBGMCall_Addr), nop, 5);
+  }
+
+  if (version == GameVersion::Win10 && Settings.MiscDisableFakeHDR)
+  {
+    SafeWrite(GameAddress(0x25E779), uint8_t(0xEB));
   }
 
   // Change SystemData.dat filename in the 2017 builds, since it seems to be slightly different format to 2021
