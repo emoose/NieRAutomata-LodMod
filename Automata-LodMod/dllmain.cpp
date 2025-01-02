@@ -42,7 +42,6 @@ LodModSettings Settings = {
   .ShadowFilterStrengthMaximum = 0,
   .ShadowModelHQ = false,
   .ShadowModelForceAll = false,
-  .ShadowCascadeAlgorithm = "",
   .CommunicationScreenResolution = 256,
   .HQMapSlots = 7,
   .WrapperLoadLibrary = { 0 },
@@ -67,30 +66,6 @@ WCHAR LogPath[4096];
 WCHAR GameDir[4096] = { 0 };
 bool GotGameDir = false;
 
-void ReadShadowCascadeAlgorithm(const wchar_t* sectionName)
-{
-  szIniBuffer[0] = 0;
-  Settings.ShadowCascadeAlgorithm.clear();
-
-  if (!GetPrivateProfileSection(sectionName, szIniBuffer, 65535, IniPath))
-    return;
-
-  // GetPrivateProfileSection already filtered out comment lines for us, nice!
-  // except it also turned new-lines into null characters, ugh, need to convert them back
-
-  for (TCHAR* cp = szIniBuffer; ; cp++)
-  {
-    if (!cp[0])
-    {
-      cp[0] = '\n';
-      if (!cp[1]) // two null chars signal end of string
-        break;
-    }
-  }
-
-  Settings.ShadowCascadeAlgorithm = trim(utf8_encode(szIniBuffer));
-}
-
 #ifdef _DEBUG
 HANDLE hIniUpdateThread;
 DWORD dwIniUpdateThread;
@@ -106,7 +81,6 @@ DWORD WINAPI IniUpdateThread(LPVOID lpParam)
     Settings.ShadowFilterStrengthBias = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthBias", 0);
     Settings.ShadowFilterStrengthMinimum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMinimum", 0);
     Settings.ShadowFilterStrengthMaximum = INI_GetFloat(IniPath, L"LodMod", L"ShadowFilterStrengthMaximum", 0);
-    ReadShadowCascadeAlgorithm(L"ShadowCascadeAlgorithm");
   }
 }
 #endif
@@ -247,10 +221,6 @@ void Settings_ReadINI(const WCHAR* iniPath)
   Settings.MiscSkipBootingScreens = INI_GetBool(iniPath, L"Misc", L"SkipBootingScreens", Settings.MiscSkipBootingScreens);
   Settings.MiscMakeIntroScreenLoadGame = INI_GetBool(iniPath, L"Misc", L"MakeIntroScreenLoadGame", Settings.MiscMakeIntroScreenLoadGame);
   Settings.MiscDisableVignette = INI_GetBool(iniPath, L"Misc", L"DisableVignette", Settings.MiscDisableVignette);
-
-  ReadShadowCascadeAlgorithm(L"ShadowCascadeAlgorithm");
-
-  dlog("ShadowCascadeAlgorithm:\n%s\n\n", Settings.ShadowCascadeAlgorithm.c_str());
 
   WCHAR encryptionKey[256];
   int sz = sizeof(encryptionKey);

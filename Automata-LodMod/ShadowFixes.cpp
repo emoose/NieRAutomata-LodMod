@@ -268,87 +268,42 @@ void UpdateShadowParams(cShadowParam* shadowParam)
   if (Settings.ShadowDistanceMaximum > 0 && new_distances[0] > Settings.ShadowDistanceMaximum)
     new_distances[0] = Settings.ShadowDistanceMaximum;
 
-  if (new_distances[0] != distances[0] || !Settings.ShadowCascadeAlgorithm.empty())
+  if (new_distances[0] != distances[0])
   {
     float new_distance = new_distances[0];
-    bool algorithm_success = false;
-    if (!Settings.ShadowCascadeAlgorithm.empty())
+
+    if (Settings.ShadowDistancePSS)
     {
-      // We have an algorithm to run!
-      try
+      // PSS shadowing (Practical Split Scheme)
+      // Almost eliminates the shadow-disappearing-on-edges bug, and makes most of the shadow-cascade seams nearly invisible
+
+      float near_dist = 1;
+      float far_dist = Settings.ShadowDistancePSS;
+      float num_cascades = 4.f;
+
+      float lambda = 0.75f;
+      float ratio = far_dist / near_dist;
+      // Skip first cascade, PSS makes it too large (hence too blurry)
+      for (int i = 2; i < 4; i++)
       {
-        SymbolTable symbols;
-        symbols.set_var("distance0", new_distances[0]);
-        symbols.set_var("original0", distances[0]);
-        symbols.set_var("original1", distances[1]);
-        symbols.set_var("original2", distances[2]);
-        symbols.set_var("original3", distances[3]);
-        symbols.set_var("cascade0", new_distances[0]);
-        symbols.set_var("cascade1", new_distances[1]);
-        symbols.set_var("cascade2", new_distances[2]);
-        symbols.set_var("cascade3", new_distances[3]);
-
-        Parser parser(symbols);
-        parser.parse(Settings.ShadowCascadeAlgorithm);
-
-        new_distances[0] = float(symbols.value_of("cascade0").real());
-        new_distances[1] = float(symbols.value_of("cascade1").real());
-        new_distances[2] = float(symbols.value_of("cascade2").real());
-        new_distances[3] = float(symbols.value_of("cascade3").real());
-        new_distances[0] = new_distances[0];
-
-        algorithm_success = true;
-      }
-      catch (const std::runtime_error& e) {
-        dlog("UpdateShadowParams: runtime_error while parsing algorithm: %s\n", e.what());
-        Settings.ShadowCascadeAlgorithm.clear();
-        algorithm_success = false;
-      }
-      catch (...) {
-        dlog("UpdateShadowParams: unknown exception while parsing algorithm\n");
-        Settings.ShadowCascadeAlgorithm.clear();
-        algorithm_success = false;
+        float si = i / num_cascades;
+        float neard = lambda * (near_dist * powf(ratio, si)) + (1 - lambda) * (near_dist + (far_dist - near_dist) * si);
+        new_distances[i - 1] = neard;
       }
     }
-
-    if (!algorithm_success)
+    else
     {
-      new_distances[0] = new_distance; // in case algorithm set it & failed...
+      // figure out the old cascade ratios
 
-      // algorithm failed or no algorithm provided, fall back to previous impl...
-      if (Settings.ShadowDistancePSS)
-      {
-        // PSS shadowing (Practical Split Scheme)
-        // Almost eliminates the shadow-disappearing-on-edges bug, and makes most of the shadow-cascade seams nearly invisible
+      float ratios[] = {
+        distances[1] / distances[0],
+        distances[2] / distances[0],
+        distances[3] / distances[0]
+      };
 
-        float near_dist = 1;
-        float far_dist = Settings.ShadowDistancePSS;
-        float num_cascades = 4.f;
-
-        float lambda = 0.75f;
-        float ratio = far_dist / near_dist;
-        // Skip first cascade, PSS makes it too large (hence too blurry)
-        for (int i = 2; i < 4; i++)
-        {
-          float si = i / num_cascades;
-          float neard = lambda * (near_dist * powf(ratio, si)) + (1 - lambda) * (near_dist + (far_dist - near_dist) * si);
-          new_distances[i - 1] = neard;
-        }
-      }
-      else
-      {
-        // figure out the old cascade ratios
-
-        float ratios[] = {
-          distances[1] / distances[0],
-          distances[2] / distances[0],
-          distances[3] / distances[0]
-        };
-
-        new_distances[1] = new_distances[0] * ratios[0];
-        new_distances[2] = new_distances[0] * ratios[1];
-        new_distances[3] = new_distances[0] * ratios[2];
-      }
+      new_distances[1] = new_distances[0] * ratios[0];
+      new_distances[2] = new_distances[0] * ratios[1];
+      new_distances[3] = new_distances[0] * ratios[2];
     }
 
     if (Settings.DebugLog)

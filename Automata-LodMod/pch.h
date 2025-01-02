@@ -21,8 +21,6 @@
 #endif
 
 #include "third_party/MinHook/MinHook.h"
-#include "third_party/DeskCalc/SymbolTable.hpp"
-#include "third_party/DeskCalc/Parser.hpp"
 
 #include "SDK.h"
 #include "CriUSM.h"
@@ -82,7 +80,6 @@ struct LodModSettings
   float ShadowFilterStrengthMaximum;
   bool ShadowModelHQ;
   bool ShadowModelForceAll;
-  std::string ShadowCascadeAlgorithm;
   int CommunicationScreenResolution;
   int HQMapSlots;
   WCHAR WrapperLoadLibrary[4096];

@@ -34,6 +34,13 @@ void criErr_Notify1(void* a1, void* a2, void* a3)
   GameAddress<fn_3args>(addr)(a1, a2, a3);
 }
 
+// TODO: Notify2 is used in newer CriMana, find this func inside NA
+// I don't really have access to every NA binary now though
+// Hopefully stubbing it should be fine
+void criErr_Notify2(void* a1, void* a2, void* a3, void* a4)
+{
+}
+
 void criErr_NotifyGeneric(void* a1, void* a2, void* a3)
 {
   const uint32_t addr[] = { 0x98378, 0x98378, 0x983E8, 0xC64490, 0x11AA00C };
