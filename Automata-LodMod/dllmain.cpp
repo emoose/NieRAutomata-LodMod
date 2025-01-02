@@ -432,8 +432,8 @@ void LodMod_Init()
     // Patch code which normally increases boot screen stage from 0, change it to 0 -> 4 instead
     const uint32_t BootScreenStage0to2_Addr[] = { 0x97C5DC, 0x973D2C, 0x9A356C, 0x688046, 0xBBA0E6 };
     const uint32_t BootScreenStage0to1_Addr[] = { 0x97C5F1, 0x973D41, 0x9A3581, 0x6880B1, 0xBBA0FB }; // Steam2017 is editing Stage1to2
-    SafeWrite(GameAddress(BootScreenStage0to2_Addr), uint32_t(4));
-    SafeWrite(GameAddress(BootScreenStage0to1_Addr), uint32_t(4));
+    SafeWrite(GameAddress(BootScreenStage0to2_Addr), uint32_t(3));
+    SafeWrite(GameAddress(BootScreenStage0to1_Addr), uint32_t(3));
 
     // Skipping boot screens ends up making the load-screen BGM continue playing even after loading into a save
     // Nopping out the call that starts that BGM seems to fix it though - I'm not sure why the BGM isn't stopping itself though, boot stage 5 should be handling it afaik...
