@@ -18,7 +18,7 @@ typedef void* (*sub_84CD60_Fn)(BehaviorScr* thisptr, void* a2, void* a3, void* a
 sub_84CD60_Fn sub_84CD60_Orig;
 void* sub_84CD60_Hook(BehaviorScr* thisptr, BYTE* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8)
 {
-  if (thisptr->ObjectId == 786944) // fix engels appearing in sea during intro flying section
+  if (thisptr->ObjectId == 0xC0200) // fix engels appearing in sea during intro flying section
     return sub_84CD60_Orig(thisptr, a2, a3, a4, a5, a6, a7, a8);
 
   // In case something in orig function makes use of LOD details, disable them before we call orig code
