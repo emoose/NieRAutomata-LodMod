@@ -184,6 +184,7 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
   <ItemGroup>
     <ClInclude Include="CriUSM.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="SDK.h" />
     <ClInclude Include="SDKEnums.h" />
     <ClInclude Include="third_party\MinHook\buffer.h" />
@@ -236,6 +237,9 @@ copy /Y "$(TargetDir)xinput1_4.dll" "C:\Program Files (x86)\Steam\steamapps\comm
     <Object Include="crimvply_decoder_v264mft.obj" />
     <Object Include="crimv_decoder_v264mft.obj" />
     <Object Include="criv264mft_lib.obj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

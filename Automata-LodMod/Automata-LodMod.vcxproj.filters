@@ -54,6 +54,9 @@
     <ClInclude Include="third_party\sjis_table.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -121,5 +124,10 @@
     <Object Include="crimana_decoder_h264_mft.obj" />
     <Object Include="crimv_decoder_v264mft.obj" />
     <Object Include="crimvply_decoder_v264mft.obj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

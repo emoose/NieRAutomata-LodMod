@@ -1,12 +1,11 @@
 ﻿#include "pch.h"
+#include "resource.h"
 
 HMODULE DllHModule;
 HMODULE GameHModule;
 uintptr_t mBaseAddress;
 
 TCHAR	szIniBuffer[65535];
-
-#define LODMOD_VERSION "0.77.5"
 
 #ifdef _DEBUG
 bool enableIniUpdateThread = false;
@@ -186,7 +185,7 @@ void Settings_ReadINI(const WCHAR* iniPath)
   static bool printedHeader = false;
   if (Settings.DebugLog && !printedHeader)
   {
-    dlog("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
+    dlog("\nNieR Automata LodMod " MODULE_VERSION_STR " - by emoose\n");
     if (GetModuleName(DllHModule, ModuleName, 4096))
       dlog("LodMod module name: %S\n", ModuleName);
 
@@ -490,7 +489,7 @@ void LodMod_Init()
 
 bool InitPlugin()
 {
-  printf("\nNieR Automata LodMod " LODMOD_VERSION " - by emoose\n");
+  printf("\nNieR Automata LodMod " MODULE_VERSION_STR " - by emoose\n");
 
   GameHModule = GetModuleHandleA("NieRAutomata.exe");
 
