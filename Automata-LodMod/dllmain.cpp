@@ -448,6 +448,24 @@ void LodMod_Init()
     SafeWrite(GameAddress(0x25E779), uint8_t(0xEB));
   }
 
+  // Fix CAS Enabled/Amount settings not saving
+  if (version == GameVersion::Win10 || version == GameVersion::Win7 || version == GameVersion::UWP)
+  {
+    // CASEnabled & CASAmount are both setup to read/write to SystemData file
+    // But some reason they forgot to let these set a "settings were changed" variable
+    // So game won't actually write them out unless you change a different setting at the same time (classic QLOC L)
+    // Luckily we can patch them to redirect to the code which sets that
+    const uint32_t UISettings_CASEnabledChanged_JmpAddr[] = { 0x985A55, 0x97D1A5, 0x9AC9E5, 0, 0 };
+    const uint32_t UISettings_CASAmountChanged_JmpAddr[] = { 0x985A8B, 0x97D1DB, 0x9ACA1B, 0, 0 };
+    const uint32_t UISettings_SetHasUpdatedSettings_Addr[] = { 0x985AA2, 0x97D1F2, 0x9ACA32, 0, 0 };
+
+    uintptr_t CASEnabledJmp = GameAddress(UISettings_SetHasUpdatedSettings_Addr) - (GameAddress(UISettings_CASEnabledChanged_JmpAddr) + 5);
+    uintptr_t CASAmountJmp = GameAddress(UISettings_SetHasUpdatedSettings_Addr) - (GameAddress(UISettings_CASAmountChanged_JmpAddr) + 5);
+
+    SafeWrite(GameAddress(UISettings_CASEnabledChanged_JmpAddr) + 1, uint32_t(CASEnabledJmp));
+    SafeWrite(GameAddress(UISettings_CASAmountChanged_JmpAddr) + 1, uint32_t(CASAmountJmp));
+  }
+
   // Change SystemData.dat filename in the 2017 builds, since it seems to be slightly different format to 2021
   // (switching between 2017/2021 builds usually ends up changing settings due to these format differences...)
   char s2017[] = "2017";
