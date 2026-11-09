@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 
-const uint32_t Game__ShowMessageBoxVA_Addr[] = { 0x26B890, 0x265FD0, 0x26BB20, 0x9204F0, 0xE48770 };
+const uint32_t Game__ShowMessageBoxVA_Addr[] = { 0x26B890, 0x265FD0, 0x26BB20, 0x9204F0, 0xE48770, 0x26B990 };
 
 // Game includes some msgs in japanese, mostly error msgs but debug has some interesting stuff
 // We have the ability to translate them, so why not?

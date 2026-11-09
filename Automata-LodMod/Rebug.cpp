@@ -6,22 +6,22 @@
 std::unordered_map<int, std::vector<std::string>> SoftFilteredModels;
 std::unordered_map<int, std::vector<std::string>> HardFilteredModels;
 
-const uint32_t Flag_DBG_Addr[] = { 0x1029840, 0x101C750, 0x10AC3E0, 0x1415B90, 0x20D9E38 };
-const uint32_t Flag_DBSTP_Addr[] = { 0x102987C, 0x101C78C, 0x10AC41C, 0x1415BCC, 0x20D9E74 };
-const uint32_t Flag_DBDISP_Addr[] = { 0x1029860, 0x101C770, 0x10AC400, 0x1415BB0, 0x20D9E58 };
-const uint32_t Flag_DBGRAPHIC_Addr[] = { 0x102988C, 0x101C79C, 0x10AC42C, 0x1415BDC, 0x20D9E84 };
+const uint32_t Flag_DBG_Addr[] = { 0x1029840, 0x101C750, 0x10AC3E0, 0x1415B90, 0x20D9E38, 0x1029B80 };
+const uint32_t Flag_DBSTP_Addr[] = { 0x102987C, 0x101C78C, 0x10AC41C, 0x1415BCC, 0x20D9E74, 0x1029BBC };
+const uint32_t Flag_DBDISP_Addr[] = { 0x1029860, 0x101C770, 0x10AC400, 0x1415BB0, 0x20D9E58, 0x1029BA0 };
+const uint32_t Flag_DBGRAPHIC_Addr[] = { 0x102988C, 0x101C79C, 0x10AC42C, 0x1415BDC, 0x20D9E84, 0x1029BCC };
 
-const uint32_t Flag_STA_Addr[] = { 0x10297C0, 0x101C6D0, 0x10AC360, 0x1415B10, 0x20D9D30 };
-const uint32_t Flag_STOP_Addr[] = { 0x10297D0, 0x101C6E0, 0x10AC370, 0x1415B20, 0x20D9D40 };
-const uint32_t Flag_GRAPHIC_Addr[] = { 0x10297E0, 0x101C6F0, 0x10AC380, 0x1415B30, 0x20D9D50 };
-const uint32_t Flag_DISP_Addr[] = { 0x10297F8, 0x101C708, 0x10AC398, 0x1415B48, 0x20D9D68 };
-const uint32_t Flag_GAME_Addr[] = { 0x10297F0, 0x101C700, 0x10AC390, 0x1415B40, 0x20D9D60 };
+const uint32_t Flag_STA_Addr[] = { 0x10297C0, 0x101C6D0, 0x10AC360, 0x1415B10, 0x20D9D30, 0x1029B00 };
+const uint32_t Flag_STOP_Addr[] = { 0x10297D0, 0x101C6E0, 0x10AC370, 0x1415B20, 0x20D9D40, 0x1029B10 };
+const uint32_t Flag_GRAPHIC_Addr[] = { 0x10297E0, 0x101C6F0, 0x10AC380, 0x1415B30, 0x20D9D50, 0x1029B20 };
+const uint32_t Flag_DISP_Addr[] = { 0x10297F8, 0x101C708, 0x10AC398, 0x1415B48, 0x20D9D68, 0x1029B38 };
+const uint32_t Flag_GAME_Addr[] = { 0x10297F0, 0x101C700, 0x10AC390, 0x1415B40, 0x20D9D60, 0x1029B30 };
 
-const uint32_t Model_ShouldBeCulled_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960, 0x5BD210, 0x9543E0 };
-const uint32_t Model_ShouldBeCulled_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0, 0x147BEC0, 0x237F290 };
+const uint32_t Model_ShouldBeCulled_Addr[] = { 0x7F40F0, 0x7EBC20, 0x81A960, 0x5BD210, 0x9543E0, 0x7F4510 };
+const uint32_t Model_ShouldBeCulled_ValueAddr[] = { 0x12500D0, 0x11D6D28, 0x12CA0A0, 0x147BEC0, 0x237F290, 0x1250450 };
 
-const uint32_t Global_PlayerCoords_Addr[] = { 0xF568B0, 0xF498B0, 0xFD4620, 0x1082DF0, 0x1F51020 };
-const uint32_t ModelManager__Update_Addr[] = { 0x846260, 0x83DBB0, 0x86CF90, 0x61D440, 0x9CAB50 }; // sets up global/per-model LOD?
+const uint32_t Global_PlayerCoords_Addr[] = { 0xF568B0, 0xF498B0, 0xFD4620, 0x1082DF0, 0x1F51020, 0xF568C0 };
+const uint32_t ModelManager__Update_Addr[] = { 0x846260, 0x83DBB0, 0x86CF90, 0x61D440, 0x9CAB50, 0x846680 }; // sets up global/per-model LOD?
 
 uint32_t GetFlagValue(DBG_FLAG flag, uint32_t& address)
 {

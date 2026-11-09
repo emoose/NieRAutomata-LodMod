@@ -11,6 +11,7 @@ enum class GameVersion { // release date follows
   UWP,       // ? 2021
   Steam2017, // 28 April 2017
   Debug2017, // 22 March 2017
+  Win10Lang,// 5 November 2026
   MaxVersions
 };
 

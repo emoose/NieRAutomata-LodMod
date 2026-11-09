@@ -1,18 +1,18 @@
 #include "pch.h"
 
-const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90, 0x627DE0, 0x9D7B80 };
+const uint32_t LodHook1Addr[] = { 0x84CD60, 0x844680, 0x873A90, 0x627DE0, 0x9D7B80, 0x84D180 };
 
-const uint32_t Setting_AOEnabled_Addr[] = { 0x1421F58, 0x1414E48, 0x14A4B08, 0x0, 0x0 };
+const uint32_t Setting_AOEnabled_Addr[] = { 0x1421F58, 0x1414E48, 0x14A4B08, 0x0, 0x0, 0x14222C8 };
 
-const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0, 0x79A620, 0x0, 0x85C230 }; // inlined in Steam/2017
+const uint32_t IsAOAllowedAddr[] = { 0x78BC20, 0x783AF0, 0x79A620, 0x0, 0x85C230, 0x78BF60 }; // inlined in Steam/2017
 
 // SAO CreateTextureBuffer call hooks:
-const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870, 0x9348F0, 0xE75EA0 };
-const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2, 0x53EE71, 0xE76313 };
+const uint32_t CreateTextureBuffer_Addr[] = { 0x248060, 0x2415D0, 0x24A870, 0x9348F0, 0xE75EA0, 0x248160 };
+const uint32_t CreateTextureBuffer_TrampolineAddr[] = { 0x7879D2, 0x77F8A2, 0x7963D2, 0x53EE71, 0xE76313, 0x787D12 };
 
-const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A, 0x53B56A, 0x837462 };
-const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46, 0x53B5D0, 0x8374CA };
-const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4, 0x53B620, 0x837502 };
+const uint32_t AO_CreateTextureBufferCall1_Addr[] = { 0x77439A, 0x76C26A, 0x782D9A, 0x53B56A, 0x837462, 0x7746DA };
+const uint32_t AO_CreateTextureBufferCall2_Addr[] = { 0x774446, 0x76C316, 0x782E46, 0x53B5D0, 0x8374CA, 0x774786 };
+const uint32_t AO_CreateTextureBufferCall3_Addr[] = { 0x7744B4, 0x76C384, 0x782EB4, 0x53B620, 0x837502, 0x7747F4 };
 
 typedef void* (*sub_84CD60_Fn)(BehaviorScr* thisptr, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8);
 sub_84CD60_Fn sub_84CD60_Orig;

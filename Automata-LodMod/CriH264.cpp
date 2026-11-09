@@ -9,8 +9,8 @@
 // uncomment the line below once you have them:
 // #define CRI_H264_SUPPORT 1
 
-const uint32_t criMana_Initialize_Addr[] = { 0x5D2A0, 0x5D2A0, 0x5D310, 0xAF6A60, 0x1233F00 };
-const uint32_t s_default_decryptionkey_Addr[] = { 0x14C86A8, 0x14BB598, 0x154B468, 0x1171908, 0x273F178 };
+const uint32_t criMana_Initialize_Addr[] = { 0x5D2A0, 0x5D2A0, 0x5D310, 0xAF6A60, 0x1233F00, 0x5D2A0 };
+const uint32_t s_default_decryptionkey_Addr[] = { 0x14C86A8, 0x14BB598, 0x154B468, 0x1171908, 0x273F178, 0x14C8A18 };
 
 
 #ifdef __cplusplus
