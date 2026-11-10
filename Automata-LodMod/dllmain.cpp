@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "Win10LangOffsets.h"
 #include "resource.h"
 
 HMODULE DllHModule;
@@ -397,24 +398,24 @@ void LodMod_Init()
 
   MH_EnableHook(MH_ALL_HOOKS);
 
-  if (Settings.MiscMakeIntroScreenLoadGame && version == GameVersion::Win10)
+  if (Settings.MiscMakeIntroScreenLoadGame && (version == GameVersion::Win10 || version == GameVersion::Win10Lang))
   {
     // TODO: figure out a cleaner way to do this...
 
     // Set NewGameLoadGame menu to "Load Game" mode (a1 + 0x28 = 1)
     // (overwrites code that would setup "press key to start" text
     uint8_t loadMode[] = { 0xc7, 0x43, 0x28, 0x01, 0x00, 0x00, 0x00 };
-    SafeWriteModule(0x99076F, loadMode, 7);
+    SafeWriteModule(RVA_For(0x99076F, Lang::Intro_LoadMode), loadMode, 7);
 
     // Skip intro-screen wait, go to TitleScreen::AdvanceToNext state nearly immediately
     // ("nearly" because it has to init some stuff first for things to work)
-    SafeWriteModule(0x99077C + 3, uint32_t(8));
+    SafeWriteModule(RVA_For(0x99077C + 3, Lang::Intro_WaitState), uint32_t(8));
 
     // Skip some check before it updates MenuState
-    SafeWriteModule(0x9908F6, uint16_t(0x9090));
+    SafeWriteModule(RVA_For(0x9908F6, Lang::Intro_SkipCheck), uint16_t(0x9090));
 
     // Make it set MenuState to NewGameLoadGame instead
-    SafeWriteModule(0x9908F8 + 3, uint32_t(MainMenuState::NewGameLoadGame));
+    SafeWriteModule(RVA_For(0x9908F8 + 3, Lang::Intro_MenuState), uint32_t(MainMenuState::NewGameLoadGame));
 
     // Prevent intro animation from playing
     // (commented out because it stops intro 'area' from loading...)
@@ -443,13 +444,13 @@ void LodMod_Init()
     SafeWrite(GameAddress(BootScreenPlayBGMCall_Addr), nop, 5);
   }
 
-  if (version == GameVersion::Win10 && Settings.MiscDisableFakeHDR)
+  if ((version == GameVersion::Win10 || version == GameVersion::Win10Lang) && Settings.MiscDisableFakeHDR)
   {
-    SafeWrite(GameAddress(0x25E779), uint8_t(0xEB));
+    SafeWrite(GameAddress(RVA_For(0x25E779, Lang::FakeHDR)), uint8_t(0xEB));
   }
 
   // Fix CAS Enabled/Amount settings not saving
-  if (version == GameVersion::Win10 || version == GameVersion::Win7 || version == GameVersion::UWP)
+  if (version == GameVersion::Win10 || version == GameVersion::Win10Lang || version == GameVersion::Win7 || version == GameVersion::UWP)
   {
     // CASEnabled & CASAmount are both setup to read/write to SystemData file
     // But some reason they forgot to let these set a "settings were changed" variable
