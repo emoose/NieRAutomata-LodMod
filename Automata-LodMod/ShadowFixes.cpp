@@ -1,32 +1,32 @@
 #include "pch.h"
 
-const uint32_t cBinaryXml__Read_Addr[] = { 0x14C700, 0x14C530, 0x14C860, 0x816880, 0xC5C130 };
+const uint32_t cBinaryXml__Read_Addr[] = { 0x14C700, 0x14C530, 0x14C860, 0x816880, 0xC5C130, 0x14C7F0 };
 
-const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70, 0x78E8A0, 0x5513C0, 0x848D30 };
+const uint32_t ShadowDistanceReaderAddr[] = { 0x77FEA0, 0x777D70, 0x78E8A0, 0x5513C0, 0x848D30, 0x7801E0 };
 
-const uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354, 0x780E84, 0x53A576, 0x835C0F };
+const uint32_t ShadowQualityPatchAddr[] = { 0x772484, 0x76A354, 0x780E84, 0x53A576, 0x835C0F, 0x7727C4 };
 
-const uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695, 0x78E1C5, 0x52FAD3, 0x8474A5 };
-const uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B, 0x78E1CB, 0x52FADB, 0x8474AB };
-const uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7, 0x78E1E7, 0x52FAEB, 0x8474C7 };
-const uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD, 0x78E1ED, 0x52FAF3, 0x8474CD };
+const uint32_t ShadowBufferSizePatch1Addr[] = { 0x77F7C5, 0x777695, 0x78E1C5, 0x52FAD3, 0x8474A5, 0x77FB05 };
+const uint32_t ShadowBufferSizePatch2Addr[] = { 0x77F7CB, 0x77769B, 0x78E1CB, 0x52FADB, 0x8474AB, 0x77FB0B };
+const uint32_t ShadowBufferSizePatch3Addr[] = { 0x77F7E7, 0x7776B7, 0x78E1E7, 0x52FAEB, 0x8474C7, 0x77FB27 };
+const uint32_t ShadowBufferSizePatch4Addr[] = { 0x77F7ED, 0x7776BD, 0x78E1ED, 0x52FAF3, 0x8474CD, 0x77FB2D };
 
-const uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7, 0x78DFF7, 0x52F3C9, 0x8471F7 };
-const uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD, 0x78DFFD, 0x52F3D1, 0x8471FD };
-const uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9, 0x78E019, 0x52F3E1, 0x847219 };
-const uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F, 0x52F3E9, 0x84721F };
+const uint32_t ShadowBufferSizePatch1Addr2[] = { 0x77F5F7, 0x7774C7, 0x78DFF7, 0x52F3C9, 0x8471F7, 0x77F937 };
+const uint32_t ShadowBufferSizePatch2Addr2[] = { 0x77F5FD, 0x7774CD, 0x78DFFD, 0x52F3D1, 0x8471FD, 0x77F93D };
+const uint32_t ShadowBufferSizePatch3Addr2[] = { 0x77F619, 0x7774E9, 0x78E019, 0x52F3E1, 0x847219, 0x77F959 };
+const uint32_t ShadowBufferSizePatch4Addr2[] = { 0x77F61F, 0x7774EF, 0x78E01F, 0x52F3E9, 0x84721F, 0x77F95F };
 // addt patches for Steam/2017
-const uint32_t ShadowBufferSizePatch5Addr2[] = { 0, 0, 0, 0x52F412, 0 };
-const uint32_t ShadowBufferSizePatch6Addr2[] = { 0, 0, 0, 0x52F41A, 0 };
+const uint32_t ShadowBufferSizePatch5Addr2[] = { 0, 0, 0, 0x52F412, 0, 0 };
+const uint32_t ShadowBufferSizePatch6Addr2[] = { 0, 0, 0, 0x52F41A, 0, 0 };
 
-const uint32_t ShadowModel_HQPatch1Addr[] = { 0x847EDA, 0x83F82A, 0x86EC0A, 0x61AC7D, 0x9CD8B6 };
-const uint32_t ShadowModel_HQPatch2Addr[] = { 0x847EF9, 0x83F849, 0x86EC29, 0x61AC9C, 0x9CD8D5 };
-const uint32_t ShadowModel_DisableLQPatch1_Addr[] = { 0x847E0D, 0x83F75D, 0x86EB3D, 0x61AB83, 0x9CD830 };
+const uint32_t ShadowModel_HQPatch1Addr[] = { 0x847EDA, 0x83F82A, 0x86EC0A, 0x61AC7D, 0x9CD8B6, 0x8482FA };
+const uint32_t ShadowModel_HQPatch2Addr[] = { 0x847EF9, 0x83F849, 0x86EC29, 0x61AC9C, 0x9CD8D5, 0x848319 };
+const uint32_t ShadowModel_DisableLQPatch1_Addr[] = { 0x847E0D, 0x83F75D, 0x86EB3D, 0x61AB83, 0x9CD830, 0x84822D };
 
-const uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421, 0x53BC53, 0x837A28 };
+const uint32_t g_HalfShadowMap_SizeAddr[] = { 0x774A21, 0x76C8F1, 0x783421, 0x53BC53, 0x837A28, 0x774D61 };
 
 // For validating that game set ShadowBuffSizeBits to what we wanted...
-const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4, 0x10517BC, 0x1F4A8A8 };
+const uint32_t ShadowBuffSizeBits_Addr[] = { 0xF513D0, 0xF443C4, 0xFCF3E4, 0x10517BC, 0x1F4A8A8, 0xF513E0 };
 
 int ExpectedShadowBuffSizeBits = 1; // to check against ShadowBuffSizeBits_Addr later on
 
@@ -327,9 +327,9 @@ std::unordered_map<uintptr_t, cShadowParam> origShadowParams;
 typedef void* (*cBinaryXml__Read_Fn)(struct cBinaryXml* thisptr, uint32_t a2, cObject* output);
 cBinaryXml__Read_Fn cBinaryXml__Read_Orig;
 
-const uint32_t str_cLightDataMinimum_Addr[] = { 0xCD9170, 0xCCE150, 0xD0D410, 0xE71288, 0x1A200B0 };
-const uint32_t str_cLightDataMinimumEv_Addr[] = { 0xCD9188, 0xCCE168, 0xD0D428, 0xE71270, 0x1A200C8 };
-const uint32_t str_cShadowParam_Addr[] = { 0xCACF60, 0xCCDF78, 0xD0D440, 0xE73C48, 0x1A234E8 };
+const uint32_t str_cLightDataMinimum_Addr[] = { 0xCD9170, 0xCCE150, 0xD0D410, 0xE71288, 0x1A200B0, 0xCD9170 };
+const uint32_t str_cLightDataMinimumEv_Addr[] = { 0xCD9188, 0xCCE168, 0xD0D428, 0xE71270, 0x1A200C8, 0xCD9188 };
+const uint32_t str_cShadowParam_Addr[] = { 0xCACF60, 0xCCDF78, 0xD0D440, 0xE73C48, 0x1A234E8, 0xCD8F90 };
 void* cBinaryXml__Read_Hook(struct cBinaryXml* thisptr, uint32_t a2, cObject* output)
 {
   auto result = cBinaryXml__Read_Orig(thisptr, a2, output);

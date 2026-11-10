@@ -1,8 +1,9 @@
 #include "pch.h"
+#include "Win10LangOffsets.h"
 
-const uint32_t MovieFileHeapSize_Addr[] = { 0x86BA27 + 1, 0x8632C7 + 1, 0x8927E7 + 1, 0x644852 + 2, 0xA0F86A + 1 };
-const uint32_t MovieVramHeapSize_Addr[] = { 0x86BC8F + 1, 0x86352F + 1, 0x892A4F + 1, 0x644B85 + 2, 0xA0FAD2 + 1 };
-const uint32_t cMemoryDeviceBase__createHeap_Addr[] = { 0x2622B0, 0x25B3B0, 0x2452D0, 0x91FCC0, 0xE1BA10 };
+const uint32_t MovieFileHeapSize_Addr[] = { 0x86BA27 + 1, 0x8632C7 + 1, 0x8927E7 + 1, 0x644852 + 2, 0xA0F86A + 1, 0x86BE48 };
+const uint32_t MovieVramHeapSize_Addr[] = { 0x86BC8F + 1, 0x86352F + 1, 0x892A4F + 1, 0x644B85 + 2, 0xA0FAD2 + 1, 0x86C0B0 };
+const uint32_t cMemoryDeviceBase__createHeap_Addr[] = { 0x2622B0, 0x25B3B0, 0x2452D0, 0x91FCC0, 0xE1BA10, 0x2623B0 };
 
 #pragma pack(push, 1)
 struct cLodSlot
@@ -134,9 +135,9 @@ bool g11420IsLoaded = false;
 void cHighMapController__UpdateSlots_Hook(cHighMapController* a1, __int64 a2, BYTE* a3)
 {
   typedef int(*GetAreaIdForCoords_Fn)(int, int, int);
-  GetAreaIdForCoords_Fn GetAreaIdForCoords = GameAddress<GetAreaIdForCoords_Fn>(0x7C2E60);
-  fn_3args Vect4Add = GameAddress<fn_3args>(0x265F00);
-  fn_2args Vect4Copy = GameAddress<fn_2args>(0x263E80);
+  GetAreaIdForCoords_Fn GetAreaIdForCoords = GameAddress<GetAreaIdForCoords_Fn>(RVA_For(0x7C2E60, Lang::HQ_GetAreaIdForCoords));
+  fn_3args Vect4Add = GameAddress<fn_3args>(RVA_For(0x265F00, Lang::HQ_Vect4Add));
+  fn_2args Vect4Copy = GameAddress<fn_2args>(RVA_For(0x263E80, Lang::HQ_Vect4Copy));
 
   int prevSlotForSection[MAX_LOD_SLOTS];
   int curSlotAreaIds[MAX_LOD_SLOTS * 2];
@@ -441,54 +442,70 @@ void MapMod_Init()
     }
   }
 
-  if (version != GameVersion::Win10)
+  if (version != GameVersion::Win10 && version != GameVersion::Win10Lang)
     return;
 
-  PrevNumLods = *GameAddress<uint8_t*>(0x7C72C7 + 2);
+  const bool lang = version == GameVersion::Win10Lang;
+
+  PrevNumLods = *GameAddress<uint8_t*>(RVA_For(0x7C72C7 + 2, Lang::HQ_NumLods));
   NewNumLods = Settings.HQMapSlots;
 
   // Increase memory buffers to handle the increased LOD slots...
   uint32_t aHighMapVramOld = uint32_t(0x6400000 * PrevNumLods);
   uint32_t aHighMapVramNew = uint32_t(0x6400000 * Settings.HQMapSlots);
-  SafeWriteModule(0x86BB38 + 1, aHighMapVramNew);
+  SafeWriteModule(RVA_For(0x86BB38 + 1, Lang::HQ_MapVramSize), aHighMapVramNew);
 
   uint32_t aHighMapFileOld = uint32_t(0x1600000 * PrevNumLods);
   uint32_t aHighMapFileNew = uint32_t(0x1600000 * Settings.HQMapSlots);
-  SafeWriteModule(0x86B8A1 + 1, aHighMapFileNew);
+  SafeWriteModule(RVA_For(0x86B8A1 + 1, Lang::HQ_MapFileSize), aHighMapFileNew);
 
   // Set cHighMapController constructor to use our LOD slot count
-  SafeWriteModule(0x7C72C7 + 2, uint8_t(Settings.HQMapSlots));
+  SafeWriteModule(RVA_For(0x7C72C7 + 2, Lang::HQ_NumLods), uint8_t(Settings.HQMapSlots));
 
   // Hook cHighMapController::UpdateSlots func to use our reimplementation instead
   // (reimplemented ver allows variable number of slots, and can read from NewSlots instead)
-  MH_CreateHook(GameAddress<LPVOID>(0x815420), cHighMapController__UpdateSlots_Hook, NULL);
+  MH_CreateHook(GameAddress<LPVOID>(RVA_For(0x815420, Lang::HQ_UpdateSlots)), cHighMapController__UpdateSlots_Hook, NULL);
 
   // Update load-list ptr to block of unused space
-  SafeWriteModule(0x108734 + 3, uint32_t(0x114d005 + 0x5566C0));
-  SafeWriteModule(0x7C2DF4 + 3, uint32_t(0xa92945 + 0x5566C0));
-  SafeWriteModule(0x7C4A61 + 3, uint32_t(0xa90cd8 + 0x5566C0));
-  SafeWriteModule(0x7C8141 + 3, uint32_t(0xa8d5f8 + 0x5566C0));
-  SafeWriteModule(0x7C8548 + 3, uint32_t(0xa8d1f1 + 0x5566C0));
-  SafeWriteModule(0x7C85E8 + 3, uint32_t(0xa8d151 + 0x5566C0));
-  SafeWriteModule(0x7C86DB + 3, uint32_t(0xa8d05e + 0x5566C0));
+  // Win10: the original rip-relative displacement is known, so write it back moved by the same distance
+  // Win10 Lang: displacements differ in the updated exe, so read the one the game already has and move that
+  // The load-list moves the same distance either way
+  auto RedirectDisp = [&](uint32_t win10Off, uint32_t win10OrigDisp, uint32_t langAddr, uint32_t extra)
+  {
+    if (!lang)
+    {
+      SafeWriteModule(win10Off + 3, uint32_t(win10OrigDisp + 0x5566C0 + extra));
+      return;
+    }
+    uint32_t cur = *GameAddress<uint32_t*>(langAddr);
+    SafeWrite(GameAddress(langAddr), uint32_t(cur + 0x5566C0 + extra));
+  };
+
+  RedirectDisp(0x108734, 0x114d005, Lang::HQ_LoadListDisp1, 0);
+  RedirectDisp(0x7C2DF4, 0xa92945, Lang::HQ_LoadListDisp2, 0);
+  RedirectDisp(0x7C4A61, 0xa90cd8, Lang::HQ_LoadListDisp3, 0);
+  RedirectDisp(0x7C8141, 0xa8d5f8, Lang::HQ_LoadListDisp4, 0);
+  RedirectDisp(0x7C8548, 0xa8d1f1, Lang::HQ_LoadListDisp5, 0);
+  RedirectDisp(0x7C85E8, 0xa8d151, Lang::HQ_LoadListDisp6, 0);
+  RedirectDisp(0x7C86DB, 0xa8d05e, Lang::HQ_LoadListDisp7, 0);
 
   // Some code writes to an int at end of load-list, update addr/pointers of it
   uint32_t loadSlotCount = (MAX_LOD_SLOTS * 2);
   uint32_t loadSlotSize = loadSlotCount * 0xC;
-  SafeWriteModule(0x7C4A6C + 3, uint32_t(0xa90d75 + 0x5566C0 + loadSlotSize));
-  SafeWriteModule(0x7D2AD3 + 3, loadSlotSize);
-  SafeWriteModule(0x8224E3 + 2, loadSlotSize);
+  RedirectDisp(0x7C4A6C, 0xa90d75, Lang::HQ_LoadListEndIntDisp, loadSlotSize);
+  SafeWriteModule(RVA_For(0x7D2AD3 + 3, Lang::HQ_LoadListSize1), loadSlotSize);
+  SafeWriteModule(RVA_For(0x8224E3 + 2, Lang::HQ_LoadListSize2), loadSlotSize);
 
   // Update load-list init func to write double entry count
-  SafeWriteModule(0x7D2ACA + 2, uint8_t(loadSlotCount));
-  SafeWriteModule(0x8224DA + 2, uint8_t(loadSlotCount));
+  SafeWriteModule(RVA_For(0x7D2ACA + 2, Lang::HQ_LoadListCount1), uint8_t(loadSlotCount));
+  SafeWriteModule(RVA_For(0x8224DA + 2, Lang::HQ_LoadListCount2), uint8_t(loadSlotCount));
 
   // Patch load-list count checks
-  SafeWriteModule(0x8317BB + 3, uint8_t(loadSlotCount));
-  SafeWriteModule(0x8361CC + 3, uint8_t(loadSlotCount));
-  SafeWriteModule(0x83182F + 3, uint8_t(loadSlotCount));
+  SafeWriteModule(RVA_For(0x8317BB + 3, Lang::HQ_LoadListCheck1), uint8_t(loadSlotCount));
+  SafeWriteModule(RVA_For(0x8361CC + 3, Lang::HQ_LoadListCheck2), uint8_t(loadSlotCount));
+  SafeWriteModule(RVA_For(0x83182F + 3, Lang::HQ_LoadListCheck3), uint8_t(loadSlotCount));
 
-  MH_CreateHook(GameAddress<LPVOID>(0x830D40), LoadListSetup_Hook, NULL);
+  MH_CreateHook(GameAddress<LPVOID>(RVA_For(0x830D40, Lang::HQ_LoadListSetup)), LoadListSetup_Hook, NULL);
 
   // Uncomment this to let game set up the LOD slot coordinates
   // It does this incorrectly for the distance = 2 slots though ;_;

@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "Win10LangOffsets.h"
 #include "resource.h"
 
 HMODULE DllHModule;
@@ -11,18 +12,18 @@ TCHAR	szIniBuffer[65535];
 bool enableIniUpdateThread = false;
 #endif
 
-const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017" };
+const char* GameVersionName[] = { "Steam/Win10", "Steam/Win7", "UWP/MS Store", "Steam/2017", "Debug/2017", "Steam/Win10 Lang" };
 
 // Address of PE header timestamp, so we can check what EXE is being used
-const uint32_t TimestampAddr[] = { 0x178, 0x1A8, 0x180, 0xD8, 0xE0 };
-const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254, 1493111701, 1490166596 };
+const uint32_t TimestampAddr[] = { 0x178, 0x1A8, 0x180, 0xD8, 0xE0, 0x178 };
+const uint32_t Timestamp[] = { 1624484050, 1624484031, 1624482254, 1493111701, 1490166596, 1791530265 };
 
 // Addresses of misc things to patch
-const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058, 0x53B1DB, 0x836904 };
-const uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC, 0x53C206, 0x837E74 };
+const uint32_t CommunicationScreenTexture_Init1_Addr[] = { 0x772658, 0x76A528, 0x781058, 0x53B1DB, 0x836904, 0x772998 };
+const uint32_t CommunicationScreenTexture_Init2_Addr[] = { 0x7750DC, 0x76CFAC, 0x783ADC, 0x53C206, 0x837E74, 0x77541C };
 
-const uint32_t DlcCheckPatch1_Addr[] = { 0x28207C, 0x27C5FC, 0, 0x510958F, 0x410AD8F };
-const uint32_t DlcCheckPatch2_Addr[] = { 0x282099, 0x27C619, 0, 0x51095AC, 0x410ADAC };
+const uint32_t DlcCheckPatch1_Addr[] = { 0x28207C, 0x27C5FC, 0, 0x510958F, 0x410AD8F, 0x28217C };
+const uint32_t DlcCheckPatch2_Addr[] = { 0x282099, 0x27C619, 0, 0x51095AC, 0x410ADAC, 0x282199 };
 
 // Configurables
 LodModSettings Settings = {
@@ -397,24 +398,24 @@ void LodMod_Init()
 
   MH_EnableHook(MH_ALL_HOOKS);
 
-  if (Settings.MiscMakeIntroScreenLoadGame && version == GameVersion::Win10)
+  if (Settings.MiscMakeIntroScreenLoadGame && (version == GameVersion::Win10 || version == GameVersion::Win10Lang))
   {
     // TODO: figure out a cleaner way to do this...
 
     // Set NewGameLoadGame menu to "Load Game" mode (a1 + 0x28 = 1)
     // (overwrites code that would setup "press key to start" text
     uint8_t loadMode[] = { 0xc7, 0x43, 0x28, 0x01, 0x00, 0x00, 0x00 };
-    SafeWriteModule(0x99076F, loadMode, 7);
+    SafeWriteModule(RVA_For(0x99076F, Lang::Intro_LoadMode), loadMode, 7);
 
     // Skip intro-screen wait, go to TitleScreen::AdvanceToNext state nearly immediately
     // ("nearly" because it has to init some stuff first for things to work)
-    SafeWriteModule(0x99077C + 3, uint32_t(8));
+    SafeWriteModule(RVA_For(0x99077C + 3, Lang::Intro_WaitState), uint32_t(8));
 
     // Skip some check before it updates MenuState
-    SafeWriteModule(0x9908F6, uint16_t(0x9090));
+    SafeWriteModule(RVA_For(0x9908F6, Lang::Intro_SkipCheck), uint16_t(0x9090));
 
     // Make it set MenuState to NewGameLoadGame instead
-    SafeWriteModule(0x9908F8 + 3, uint32_t(MainMenuState::NewGameLoadGame));
+    SafeWriteModule(RVA_For(0x9908F8 + 3, Lang::Intro_MenuState), uint32_t(MainMenuState::NewGameLoadGame));
 
     // Prevent intro animation from playing
     // (commented out because it stops intro 'area' from loading...)
@@ -424,40 +425,40 @@ void LodMod_Init()
 
   if (Settings.MiscSkipIntroMovies)
   {
-    const uint32_t IntroMoviesPatch_Addr[] = { 0x760D76, 0x758C46, 0x76F126, 0x51E5AE, 0x80DDD1 };
+    const uint32_t IntroMoviesPatch_Addr[] = { 0x760D76, 0x758C46, 0x76F126, 0x51E5AE, 0x80DDD1, 0x7610B6 };
     SafeWrite(GameAddress(IntroMoviesPatch_Addr), uint16_t(0x9090));
   }
 
   if (Settings.MiscSkipBootingScreens)
   {
     // Patch code which normally increases boot screen stage from 0, change it to 0 -> 4 instead
-    const uint32_t BootScreenStage0to2_Addr[] = { 0x97C5DC, 0x973D2C, 0x9A356C, 0x688046, 0xBBA0E6 };
-    const uint32_t BootScreenStage0to1_Addr[] = { 0x97C5F1, 0x973D41, 0x9A3581, 0x6880B1, 0xBBA0FB }; // Steam2017 is editing Stage1to2
+    const uint32_t BootScreenStage0to2_Addr[] = { 0x97C5DC, 0x973D2C, 0x9A356C, 0x688046, 0xBBA0E6, 0x97CCBC };
+    const uint32_t BootScreenStage0to1_Addr[] = { 0x97C5F1, 0x973D41, 0x9A3581, 0x6880B1, 0xBBA0FB, 0x97CCD1 }; // Steam2017 is editing Stage1to2
     SafeWrite(GameAddress(BootScreenStage0to2_Addr), uint32_t(3));
     SafeWrite(GameAddress(BootScreenStage0to1_Addr), uint32_t(3));
 
     // Skipping boot screens ends up making the load-screen BGM continue playing even after loading into a save
     // Nopping out the call that starts that BGM seems to fix it though - I'm not sure why the BGM isn't stopping itself though, boot stage 5 should be handling it afaik...
-    const uint32_t BootScreenPlayBGMCall_Addr[] = { 0x97C5B9, 0x973D09, 0x9A3549, 0x688020, 0xBBA0C3 };
+    const uint32_t BootScreenPlayBGMCall_Addr[] = { 0x97C5B9, 0x973D09, 0x9A3549, 0x688020, 0xBBA0C3, 0x97CC99 };
     uint8_t nop[] = { 0x90, 0x90, 0x90, 0x90, 0x90 };
     SafeWrite(GameAddress(BootScreenPlayBGMCall_Addr), nop, 5);
   }
 
-  if (version == GameVersion::Win10 && Settings.MiscDisableFakeHDR)
+  if ((version == GameVersion::Win10 || version == GameVersion::Win10Lang) && Settings.MiscDisableFakeHDR)
   {
-    SafeWrite(GameAddress(0x25E779), uint8_t(0xEB));
+    SafeWrite(GameAddress(RVA_For(0x25E779, Lang::FakeHDR)), uint8_t(0xEB));
   }
 
   // Fix CAS Enabled/Amount settings not saving
-  if (version == GameVersion::Win10 || version == GameVersion::Win7 || version == GameVersion::UWP)
+  if (version == GameVersion::Win10 || version == GameVersion::Win10Lang || version == GameVersion::Win7 || version == GameVersion::UWP)
   {
     // CASEnabled & CASAmount are both setup to read/write to SystemData file
     // But some reason they forgot to let these set a "settings were changed" variable
     // So game won't actually write them out unless you change a different setting at the same time (classic QLOC L)
     // Luckily we can patch them to redirect to the code which sets that
-    const uint32_t UISettings_CASEnabledChanged_JmpAddr[] = { 0x985A55, 0x97D1A5, 0x9AC9E5, 0, 0 };
-    const uint32_t UISettings_CASAmountChanged_JmpAddr[] = { 0x985A8B, 0x97D1DB, 0x9ACA1B, 0, 0 };
-    const uint32_t UISettings_SetHasUpdatedSettings_Addr[] = { 0x985AA2, 0x97D1F2, 0x9ACA32, 0, 0 };
+    const uint32_t UISettings_CASEnabledChanged_JmpAddr[] = { 0x985A55, 0x97D1A5, 0x9AC9E5, 0, 0, 0x986135 };
+    const uint32_t UISettings_CASAmountChanged_JmpAddr[] = { 0x985A8B, 0x97D1DB, 0x9ACA1B, 0, 0, 0x98616B };
+    const uint32_t UISettings_SetHasUpdatedSettings_Addr[] = { 0x985AA2, 0x97D1F2, 0x9ACA32, 0, 0, 0x986182 };
 
     uintptr_t CASEnabledJmp = GameAddress(UISettings_SetHasUpdatedSettings_Addr) - (GameAddress(UISettings_CASEnabledChanged_JmpAddr) + 5);
     uintptr_t CASAmountJmp = GameAddress(UISettings_SetHasUpdatedSettings_Addr) - (GameAddress(UISettings_CASAmountChanged_JmpAddr) + 5);
